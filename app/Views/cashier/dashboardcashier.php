@@ -36,6 +36,11 @@
                             <i class="bi bi-box-seam"></i> Products
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?= base_url('barcode-master/scan.php') ?>">
+                            <i class="bi bi-camera"></i> Scan Barcode
+                        </a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">

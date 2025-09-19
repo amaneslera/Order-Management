@@ -69,6 +69,12 @@
             </div>
         </div>
 
+        <!-- Add this to your sidebar or menu -->
+        <a href="<?= base_url('barcode-master/scan.php') ?>" class="menu-item">
+            <i class="bi bi-camera"></i>
+            <span>Scan Barcode</span>
+        </a>
+
 
     <!-- Floating Chat Toggle Button -->
 <button id="openChatBtn" class="btn btn-primary rounded-circle shadow" 
