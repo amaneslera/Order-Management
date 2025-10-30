@@ -4,7 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CreateUsersTable extends Migration
+class CreateOrdersTable extends Migration
 {
     public function up()
     {
@@ -15,35 +15,37 @@ class CreateUsersTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
-            'username' => [
+            'order_number' => [
                 'type'       => 'VARCHAR',
-                'constraint' => '100',
+                'constraint' => '50',
                 'unique'     => true,
             ],
-            'password' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '255',
-            ],
-            'role' => [
+            'status' => [
                 'type'       => 'ENUM',
-                'constraint' => ['Admin', 'cashier'],
-                'default'    => 'cashier',
+                'constraint' => ['pending', 'paid', 'completed', 'cancelled'],
+                'default'    => 'pending',
+            ],
+            'total_amount' => [
+                'type'       => 'DECIMAL',
+                'constraint' => '10,2',
+                'default'    => '0.00',
             ],
             'created_at' => [
-                'type'    => 'DATETIME',
-                'null'    => true,
+                'type' => 'DATETIME',
+                'null' => true,
             ],
             'updated_at' => [
-                'type'    => 'DATETIME',
-                'null'    => true,
+                'type' => 'DATETIME',
+                'null' => true,
             ],
         ]);
+        
         $this->forge->addKey('id', true);
-        $this->forge->createTable('users');
+        $this->forge->createTable('orders');
     }
 
     public function down()
     {
-        $this->forge->dropTable('users');
+        $this->forge->dropTable('orders');
     }
 }

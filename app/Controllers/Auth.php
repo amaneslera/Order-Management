@@ -32,11 +32,11 @@ class Auth extends Controller
                 // Set success message
                 session()->setFlashdata('success', 'Welcome back, ' . $username . '! You have successfully logged in.');
                 
-                // Redirect based on role
+                // Redirect based on role - Using NEW Coffee Kiosk Dashboards
                 if ($user['role'] === 'Admin') {
-                    return redirect()->to(site_url('admin'));
+                    return redirect()->to(base_url('admin')); // AdminController::dashboard
                 } else {
-                    return redirect()->to(site_url('cashier'));
+                    return redirect()->to(base_url('cashier')); // POSController::index (cashier)
                 }
             } else {
                 return view('auth/login', ['error' => 'Invalid username or password']);
@@ -49,6 +49,6 @@ class Auth extends Controller
     public function logout()
     {
         session()->destroy();
-        return redirect()->to('/login');
+        return redirect()->to(base_url('login'));
     }
 }
