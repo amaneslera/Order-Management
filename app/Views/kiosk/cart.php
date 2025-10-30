@@ -46,7 +46,7 @@
                     <div class="text-center py-5">
                         <i class="bi bi-cart-x" style="font-size: 5rem; color: #ccc;"></i>
                         <h3 class="mt-3">Your cart is empty</h3>
-                        <a href="/kiosk" class="btn btn-primary mt-3">Browse Menu</a>
+                        <a href="<?= base_url('kiosk') ?>" class="btn btn-primary mt-3">Browse Menu</a>
                     </div>
                 <?php else: ?>
                     <?php foreach ($cart_items as $key => $item): ?>
@@ -110,17 +110,18 @@
                             <strong class="text-primary h4">₱<?= number_format($total, 2) ?></strong>
                         </div>
                         
-                        <form action="/kiosk/checkout" method="POST">
+                        <form action="<?= base_url('kiosk/checkout') ?>" method="POST">
+                            <?= csrf_field() ?>
                             <button type="submit" class="btn btn-success btn-checkout w-100">
                                 <i class="bi bi-check-circle me-2"></i>Proceed to Checkout
                             </button>
                         </form>
 
-                        <a href="/kiosk" class="btn btn-outline-secondary w-100 mt-2">
+                        <a href="<?= base_url('kiosk') ?>" class="btn btn-outline-secondary w-100 mt-2">
                             <i class="bi bi-arrow-left me-2"></i>Continue Shopping
                         </a>
 
-                        <a href="/kiosk/cart/clear" class="btn btn-outline-danger w-100 mt-2">
+                        <a href="<?= base_url('kiosk/cart/clear') ?>" class="btn btn-outline-danger w-100 mt-2">
                             <i class="bi bi-trash me-2"></i>Clear Cart
                         </a>
                     </div>
@@ -141,10 +142,13 @@
                 return;
             }
 
-            fetch('/kiosk/cart/update', {
+            fetch('<?= base_url('kiosk/cart/update') ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `cart_key=${cartKey}&quantity=${newQty}`
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `cart_key=${cartKey}&quantity=${newQty}&<?= csrf_token() ?>=<?= csrf_hash() ?>`
             })
             .then(response => response.json())
             .then(data => {
@@ -157,10 +161,13 @@
         function removeItem(cartKey) {
             if (!confirm('Remove this item from cart?')) return;
             
-            fetch('/kiosk/cart/remove', {
+            fetch('<?= base_url('kiosk/cart/remove') ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `cart_key=${cartKey}`
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `cart_key=${cartKey}&<?= csrf_token() ?>=<?= csrf_hash() ?>`
             })
             .then(response => response.json())
             .then(data => {

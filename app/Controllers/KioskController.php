@@ -164,7 +164,7 @@ class KioskController extends BaseController
             session()->remove('cart');
 
             // Redirect to order confirmation with barcode
-            return redirect()->to('/kiosk/order-confirmation/' . $orderId);
+            return redirect()->to(base_url('kiosk/order-confirmation/' . $orderId));
         }
 
         return redirect()->back()->with('error', 'Failed to create order');
@@ -176,7 +176,7 @@ class KioskController extends BaseController
         $order = $this->orderModel->getOrderWithItems($orderId);
 
         if (!$order) {
-            return redirect()->to('/kiosk')->with('error', 'Order not found');
+            return redirect()->to(base_url('kiosk'))->with('error', 'Order not found');
         }
 
         $data['order'] = $order;
@@ -198,6 +198,6 @@ class KioskController extends BaseController
     public function clearCart()
     {
         session()->remove('cart');
-        return redirect()->to('/kiosk')->with('success', 'Cart cleared');
+        return redirect()->to(base_url('kiosk'))->with('success', 'Cart cleared');
     }
 }

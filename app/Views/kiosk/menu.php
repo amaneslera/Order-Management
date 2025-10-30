@@ -93,11 +93,11 @@
                     <p class="mb-0 small">Select your favorite items</p>
                 </div>
                 <div>
-                    <a href="/kiosk/cart" class="btn btn-light btn-lg position-relative">
+                    <a href="<?= base_url('kiosk/cart') ?>" class="btn btn-light btn-lg position-relative">
                         <i class="bi bi-cart3 me-2"></i>Cart
                         <span class="cart-badge" id="cart-count">0</span>
                     </a>
-                    <a href="/login" class="btn btn-outline-light btn-lg ms-2">
+                    <a href="<?= base_url('login') ?>" class="btn btn-outline-light btn-lg ms-2">
                         <i class="bi bi-person-circle me-2"></i>Staff Login
                     </a>
                 </div>
@@ -131,7 +131,7 @@
                 <div class="card menu-item-card">
                     <div class="menu-item-image d-flex align-items-center justify-content-center">
                         <?php if ($item['image']): ?>
-                            <img src="/uploads/menu/<?= esc($item['image']) ?>" alt="<?= esc($item['name']) ?>" class="menu-item-image">
+                            <img src="<?= base_url('uploads/menu/' . esc($item['image'])) ?>" alt="<?= esc($item['name']) ?>" class="menu-item-image">
                         <?php else: ?>
                             <i class="bi bi-cup-hot text-muted" style="font-size: 3rem;"></i>
                         <?php endif; ?>
@@ -181,12 +181,13 @@
 
         // Add to cart function
         function addToCart(itemId, itemName, itemPrice) {
-            fetch('/kiosk/cart/add', {
+            fetch('<?= base_url('kiosk/cart/add') ?>', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: `item_id=${itemId}&quantity=1`
+                body: `item_id=${itemId}&quantity=1&<?= csrf_token() ?>=<?= csrf_hash() ?>`
             })
             .then(response => response.json())
             .then(data => {
@@ -194,7 +195,7 @@
                     updateCartCount(data.cart_count);
                     showNotification(`${itemName} added to cart!`, 'success');
                 } else {
-                    showNotification('Failed to add item', 'error');
+                    showNotification(data.message || 'Failed to add item', 'error');
                 }
             })
             .catch(error => {

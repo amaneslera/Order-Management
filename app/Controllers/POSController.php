@@ -58,10 +58,10 @@ class POSController extends BaseController
             $order = $this->orderModel->getOrderByNumber($orderNumber);
             
             if ($order) {
-                return redirect()->to('/pos/order/' . $order['id']);
+                return redirect()->to(base_url('pos/order/' . $order['id']));
             }
             
-            return redirect()->back()->with('error', 'Order not found');
+            return redirect()->back()->with('error', 'Order not found: ' . $orderNumber);
         }
 
         return view('pos/search');
@@ -76,7 +76,7 @@ class POSController extends BaseController
         $order = $this->orderModel->getOrderWithItems($orderId);
 
         if (!$order) {
-            return redirect()->to('/pos')->with('error', 'Order not found');
+            return redirect()->to(base_url('pos'))->with('error', 'Order not found');
         }
 
         $data['order'] = $order;

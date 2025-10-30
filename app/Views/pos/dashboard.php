@@ -83,10 +83,12 @@
                 <div class="card mb-4">
                     <div class="card-body">
                         <h5><i class="bi bi-search me-2"></i>Quick Order Search</h5>
-                        <form action="/pos/search" method="GET" class="row g-3">
+                        <form action="<?= base_url('pos/search') ?>" method="GET" class="row g-3">
                             <div class="col-md-8">
                                 <input type="text" name="order_number" class="form-control form-control-lg" 
-                                       placeholder="Enter or scan order number" autofocus>
+                                       placeholder="Enter or scan order number (e.g., ORD-20251030-XXXX)" 
+                                       autofocus 
+                                       required>
                             </div>
                             <div class="col-md-4">
                                 <button type="submit" class="btn btn-primary btn-lg w-100">

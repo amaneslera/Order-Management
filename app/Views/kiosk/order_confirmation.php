@@ -56,19 +56,19 @@
                     </div>
 
                     <div class="barcode-container">
-                        <p class="mb-2">Your Order Number</p>
+                        <p class="mb-2 text-uppercase fw-bold">Your Order Number</p>
                         <div class="order-number"><?= esc($order['order_number']) ?></div>
                         
                         <!-- Barcode Generation using existing barcode system -->
                         <div class="mt-3" id="barcode-image">
-                            <img src="/barcode-master/generate-barcode.php?text=<?= urlencode($order['order_number']) ?>" 
+                            <img src="<?= base_url('barcode-master/generate-barcode.php?text=' . urlencode($order['order_number'])) ?>" 
                                  alt="Order Barcode" 
                                  style="max-width: 100%; height: auto;">
                         </div>
                         
-                        <small class="text-muted d-block mt-2">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Show this code to the cashier
+                        <small class="text-danger d-block mt-3 fw-bold">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            GIVE THIS NUMBER TO THE CASHIER
                         </small>
                     </div>
 
@@ -113,7 +113,7 @@
                     </div>
 
                     <div class="d-flex gap-2 mt-4">
-                        <a href="/kiosk" class="btn btn-primary flex-fill">
+                        <a href="<?= base_url('kiosk') ?>" class="btn btn-primary flex-fill">
                             <i class="bi bi-house-fill me-2"></i>Back to Menu
                         </a>
                         <button onclick="window.print()" class="btn btn-outline-secondary flex-fill">
