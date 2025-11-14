@@ -226,9 +226,9 @@
                                         </a>
                                     </div>
                                     <div class="col-md-3">
-                                        <a href="<?= base_url('pos') ?>" class="btn btn-outline-warning w-100 mb-2">
-                                            <i class="bi bi-shop me-2"></i>Open POS
-                                        </a>
+                                        <button type="button" class="btn btn-outline-danger w-100 mb-2" data-bs-toggle="modal" data-bs-target="#emailReportModal">
+                                            <i class="bi bi-envelope me-2"></i>Send Daily Report
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -260,6 +260,44 @@
         </div>
     </div>
 
+    <!-- Email Report Modal -->
+    <div class="modal fade" id="emailReportModal" tabindex="-1" aria-labelledby="emailReportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="emailReportModalLabel">
+                        <i class="bi bi-envelope me-2"></i>Send Daily Sales Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="emailReportForm">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            This will send today's sales report including total revenue, order statistics, top selling items, and payment methods summary.
+                        </div>
+                        <div class="mb-3">
+                            <label for="recipientEmail" class="form-label">Recipient Email Address</label>
+                            <input type="email" class="form-control" id="recipientEmail" name="email" 
+                                   placeholder="admin@example.com" required>
+                            <div class="form-text">Enter the email address to receive the daily report</div>
+                        </div>
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> Make sure you have configured your email settings in the <code>.env</code> file. 
+                            You need a Gmail App Password (not your regular password).
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="sendReportBtn">
+                        <i class="bi bi-send me-2"></i>Send Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const openChatBtn = document.getElementById('openChatBtn');
@@ -283,6 +321,52 @@
             openChat();
         });
         closeChatBtn.addEventListener('click', closeChat);
+
+        // Email Report Functionality
+        const sendReportBtn = document.getElementById('sendReportBtn');
+        const emailReportForm = document.getElementById('emailReportForm');
+        const emailReportModal = new bootstrap.Modal(document.getElementById('emailReportModal'));
+
+        sendReportBtn.addEventListener('click', async function() {
+            const email = document.getElementById('recipientEmail').value;
+            
+            if (!email) {
+                alert('Please enter a recipient email address');
+                return;
+            }
+
+            // Disable button and show loading
+            sendReportBtn.disabled = true;
+            sendReportBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+            try {
+                const formData = new FormData();
+                formData.append('email', email);
+                formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+                const response = await fetch('<?= base_url('admin/send-daily-report') ?>', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Daily sales report has been sent successfully to ' + email);
+                    emailReportModal.hide();
+                    emailReportForm.reset();
+                } else {
+                    alert('❌ Failed to send report: ' + (result.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error sending report:', error);
+                alert('❌ Error sending report. Please check your email configuration in .env file and try again.');
+            } finally {
+                // Re-enable button
+                sendReportBtn.disabled = false;
+                sendReportBtn.innerHTML = '<i class="bi bi-send me-2"></i>Send Report';
+            }
+        });
     </script>
 </body>
 </html>

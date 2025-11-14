@@ -236,7 +236,7 @@ class POSController extends BaseController
         $payment = $this->paymentModel->getPaymentByOrder($orderId);
 
         if (!$order) {
-            return redirect()->to('/pos')->with('error', 'Order not found');
+            return redirect()->to(base_url('pos'))->with('error', 'Order not found');
         }
 
         $data['order'] = $order;

@@ -23,7 +23,7 @@
 <body class="bg-light">
     <div class="container py-4">
         <div class="mb-3">
-            <a href="/pos" class="btn btn-outline-secondary">
+            <a href="<?= base_url('pos') ?>" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Back to POS
             </a>
         </div>
@@ -130,7 +130,7 @@
                 <div class="card">
                     <div class="card-body text-center">
                         <h6>Order Barcode</h6>
-                        <img src="/barcode-master/generate-barcode.php?text=<?= urlencode($order['order_number']) ?>" 
+                        <img src="<?= base_url('barcode-master/generate-barcode.php?text=' . urlencode($order['order_number'])) ?>" 
                              alt="Order Barcode" style="max-width: 100%; height: auto;">
                     </div>
                 </div>
@@ -194,10 +194,10 @@
                         <h6 class="mb-0">Actions</h6>
                     </div>
                     <div class="card-body">
-                        <a href="/pos/receipt/<?= $order['id'] ?>" class="btn btn-outline-primary w-100 mb-2" target="_blank">
+                        <a href="<?= base_url('pos/receipt/' . $order['id']) ?>" class="btn btn-outline-primary w-100 mb-2" target="_blank">
                             <i class="bi bi-printer me-2"></i>Print Receipt
                         </a>
-                        <a href="/pos" class="btn btn-outline-secondary w-100">
+                        <a href="<?= base_url('pos') ?>" class="btn btn-outline-secondary w-100">
                             <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
                         </a>
                     </div>
@@ -213,10 +213,13 @@
             e.preventDefault();
             const status = document.getElementById('orderStatus').value;
             
-            fetch('/pos/order/status/update', {
+            fetch('<?= base_url('pos/order/status/update') ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `order_id=<?= $order['id'] ?>&status=${status}`
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `order_id=<?= $order['id'] ?>&status=${status}&<?= csrf_token() ?>=<?= csrf_hash() ?>`
             })
             .then(response => response.json())
             .then(data => {
@@ -224,8 +227,12 @@
                     alert('Status updated successfully!');
                     location.reload();
                 } else {
-                    alert('Failed to update status');
+                    alert('Failed to update status: ' + (data.message || ''));
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating status');
             });
         });
 
@@ -235,9 +242,13 @@
             e.preventDefault();
             const formData = new FormData(this);
             formData.append('order_id', '<?= $order['id'] ?>');
+            formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
             
-            fetch('/pos/payment/process', {
+            fetch('<?= base_url('pos/payment/process') ?>', {
                 method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: new URLSearchParams(formData)
             })
             .then(response => response.json())
@@ -246,8 +257,12 @@
                     alert('Payment processed successfully!');
                     location.reload();
                 } else {
-                    alert('Failed to process payment');
+                    alert('Failed to process payment: ' + (data.message || ''));
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing payment');
             });
         });
 
@@ -256,9 +271,13 @@
             e.preventDefault();
             const formData = new FormData(this);
             formData.append('order_id', '<?= $order['id'] ?>');
+            formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
             
-            fetch('/pos/order/item/add', {
+            fetch('<?= base_url('pos/order/item/add') ?>', {
                 method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: new URLSearchParams(formData)
             })
             .then(response => response.json())
@@ -267,8 +286,12 @@
                     alert('Item added successfully!');
                     location.reload();
                 } else {
-                    alert('Failed to add item');
+                    alert('Failed to add item: ' + (data.message || ''));
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while adding item');
             });
         });
         <?php endif; ?>
@@ -277,10 +300,13 @@
         function removeItem(itemId) {
             if (!confirm('Remove this item?')) return;
             
-            fetch('/pos/order/item/remove', {
+            fetch('<?= base_url('pos/order/item/remove') ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `item_id=${itemId}`
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `item_id=${itemId}&<?= csrf_token() ?>=<?= csrf_hash() ?>`
             })
             .then(response => response.json())
             .then(data => {
@@ -288,8 +314,12 @@
                     alert('Item removed!');
                     location.reload();
                 } else {
-                    alert('Failed to remove item');
+                    alert('Failed to remove item: ' + (data.message || ''));
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while removing item');
             });
         }
     </script>

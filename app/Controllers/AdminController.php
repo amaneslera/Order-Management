@@ -7,6 +7,7 @@ use App\Models\OrderItemModel;
 use App\Models\PaymentModel;
 use App\Models\UserModel;
 use App\Models\ActivityLogModel;
+use App\Libraries\EmailService;
 
 class AdminController extends BaseController
 {
@@ -15,6 +16,7 @@ class AdminController extends BaseController
     protected $paymentModel;
     protected $userModel;
     protected $activityLog;
+    protected $emailService;
 
     public function __construct()
     {
@@ -23,6 +25,7 @@ class AdminController extends BaseController
         $this->paymentModel = new PaymentModel();
         $this->userModel = new UserModel();
         $this->activityLog = new ActivityLogModel();
+        $this->emailService = new EmailService();
     }
 
     // Check if user is admin
@@ -235,4 +238,95 @@ class AdminController extends BaseController
 
         return redirect()->back()->with('error', 'Failed to delete user');
     }
+
+    // Send Daily Sales Report via Email
+    public function sendDailySalesReport()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        // Get recipient email from POST or use admin's email
+        $recipientEmail = $this->request->getPost('email');
+        
+        if (!$recipientEmail) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Please provide recipient email address'
+            ]);
+        }
+
+        // Gather today's sales data
+        $salesData = $this->gatherSalesData();
+        
+        // Send email using EmailService
+        $result = $this->emailService->sendDailySalesReport($recipientEmail, $salesData);
+        
+        if ($result['success']) {
+            $this->activityLog->logActivity(
+                session()->get('user_id'),
+                'send_daily_report',
+                "Sent daily sales report to {$recipientEmail}"
+            );
+        }
+        
+        return $this->response->setJSON($result);
+    }
+
+    // Gather sales data for today
+    private function gatherSalesData()
+    {
+        $today = date('Y-m-d');
+        
+        // Get today's orders
+        $todayOrders = $this->orderModel
+            ->where('DATE(created_at)', $today)
+            ->findAll();
+        
+        $totalOrders = count($todayOrders);
+        $completedOrders = count(array_filter($todayOrders, fn($o) => $o['status'] === 'completed'));
+        $pendingOrders = count(array_filter($todayOrders, fn($o) => $o['status'] === 'pending'));
+        
+        // Calculate total revenue (exclude cancelled orders)
+        $totalRevenue = array_sum(array_map(
+            fn($o) => $o['status'] !== 'cancelled' ? $o['total_amount'] : 0,
+            $todayOrders
+        ));
+        
+        $averageOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+        
+        // Get top selling items
+        $topItems = $this->orderItemModel
+            ->select('menu_items.name, SUM(order_items.quantity) as quantity, SUM(order_items.quantity * order_items.price) as revenue')
+            ->join('menu_items', 'menu_items.id = order_items.menu_item_id')
+            ->join('orders', 'orders.id = order_items.order_id')
+            ->where('DATE(orders.created_at)', $today)
+            ->groupBy('order_items.menu_item_id')
+            ->orderBy('quantity', 'DESC')
+            ->limit(5)
+            ->findAll();
+        
+        // Get payment methods summary
+        $payments = $this->paymentModel
+            ->select('payment_method, SUM(amount) as total')
+            ->join('orders', 'orders.id = payments.order_id')
+            ->where('DATE(payments.payment_date)', $today)
+            ->groupBy('payment_method')
+            ->findAll();
+        
+        $paymentMethods = [];
+        foreach ($payments as $payment) {
+            $paymentMethods[$payment['payment_method']] = $payment['total'];
+        }
+        
+        return [
+            'total_orders' => $totalOrders,
+            'completed_orders' => $completedOrders,
+            'pending_orders' => $pendingOrders,
+            'total_revenue' => $totalRevenue,
+            'average_order_value' => $averageOrderValue,
+            'top_items' => $topItems,
+            'payment_methods' => $paymentMethods,
+        ];
+    }
 }
+

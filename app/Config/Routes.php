@@ -57,6 +57,9 @@ $routes->group('admin', function($routes) {
     $routes->post('users/edit/(:num)', 'AdminController::editUser/$1');
     $routes->get('users/delete/(:num)', 'AdminController::deleteUser/$1');
     
+    // Email Reports
+    $routes->post('send-daily-report', 'AdminController::sendDailySalesReport');
+    
     // Menu Management
     $routes->get('menu', 'MenuController::index');
     $routes->get('menu/add', 'MenuController::add');
