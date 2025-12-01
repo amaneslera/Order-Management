@@ -71,6 +71,12 @@ $routes->group('admin', function($routes) {
     // Email Reports
     $routes->post('send-daily-report', 'AdminController::sendDailySalesReport');
     
+    // Inventory Management
+    $routes->get('inventory', 'AdminController::inventory');
+    $routes->post('inventory/update-stock', 'AdminController::updateStock');
+    $routes->get('inventory/low-stock', 'AdminController::lowStockAlerts');
+    $routes->get('inventory/report', 'AdminController::inventoryReport');
+    
     // Menu Management
     $routes->get('menu', 'MenuController::index');
     $routes->get('menu/add', 'MenuController::add');

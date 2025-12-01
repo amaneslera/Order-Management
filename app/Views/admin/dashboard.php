@@ -44,10 +44,12 @@
                     <a href="<?= base_url('admin') ?>" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
                     <a href="<?= base_url('admin/reports') ?>" class="nav-link"><i class="bi bi-graph-up me-2"></i>Reports</a>
                     <a href="<?= base_url('admin/menu') ?>" class="nav-link"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
+                    <a href="<?= base_url('admin/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
                     <a href="<?= base_url('admin/users') ?>" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
                     <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
                     <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-shop me-2"></i>POS System</a>
                     <hr class="border-light">
+                    <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
                     <a href="<?= base_url('barcode-master/dashboard.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode System</a>
                     <a href="#" id="openChatLink" class="nav-link"><i class="bi bi-chat-dots me-2"></i>Messages</a>
                     <hr class="border-light">
@@ -201,6 +203,102 @@
                     </div>
                 </div>
 
+                <!-- Inventory Alerts -->
+                <?php if ($out_of_stock_count > 0 || $low_stock_count > 0): ?>
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card border-<?= $out_of_stock_count > 0 ? 'danger' : 'warning' ?>">
+                            <div class="card-header bg-<?= $out_of_stock_count > 0 ? 'danger' : 'warning' ?> text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Inventory Alerts
+                                    <span class="badge bg-light text-dark ms-2"><?= $out_of_stock_count + $low_stock_count ?></span>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <?php if ($out_of_stock_count > 0): ?>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-danger mb-2">
+                                            <h6 class="alert-heading"><i class="bi bi-x-circle me-2"></i>Out of Stock Items</h6>
+                                            <p class="mb-0">
+                                                <strong><?= $out_of_stock_count ?></strong> item(s) are out of stock and cannot be sold.
+                                            </p>
+                                            <a href="<?= base_url('admin/inventory/low-stock') ?>" class="btn btn-sm btn-danger mt-2">
+                                                View Details <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($low_stock_count > 0): ?>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-warning mb-2">
+                                            <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Low Stock Items</h6>
+                                            <p class="mb-0">
+                                                <strong><?= $low_stock_count ?></strong> item(s) are running low on stock.
+                                            </p>
+                                            <a href="<?= base_url('admin/inventory') ?>" class="btn btn-sm btn-warning mt-2">
+                                                Manage Inventory <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Quick Stock Overview -->
+                                <?php if (!empty($low_stock_items)): ?>
+                                <div class="mt-3">
+                                    <h6>Items Requiring Attention:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th>Category</th>
+                                                    <th class="text-center">Current Stock</th>
+                                                    <th class="text-center">Threshold</th>
+                                                    <th class="text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach (array_slice($low_stock_items, 0, 5) as $item): ?>
+                                                <tr>
+                                                    <td><?= esc($item['name']) ?></td>
+                                                    <td><span class="badge bg-secondary"><?= esc($item['category']) ?></span></td>
+                                                    <td class="text-center">
+                                                        <strong class="text-<?= $item['stock_quantity'] == 0 ? 'danger' : 'warning' ?>">
+                                                            <?= $item['stock_quantity'] ?>
+                                                        </strong>
+                                                    </td>
+                                                    <td class="text-center"><?= $item['low_stock_threshold'] ?></td>
+                                                    <td class="text-center">
+                                                        <?php if ($item['stock_quantity'] == 0): ?>
+                                                            <span class="badge bg-danger">Out of Stock</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-warning">Low Stock</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <?php if (count($low_stock_items) > 5): ?>
+                                        <div class="text-center">
+                                            <a href="<?= base_url('admin/inventory/low-stock') ?>" class="btn btn-sm btn-outline-primary">
+                                                View All <?= count($low_stock_items) ?> Items
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Quick Actions -->
                 <div class="row">
                     <div class="col-md-12">
@@ -210,22 +308,32 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <a href="<?= base_url('admin/menu/add') ?>" class="btn btn-outline-primary w-100 mb-2">
                                             <i class="bi bi-plus-circle me-2"></i>Add Menu Item
                                         </a>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <a href="<?= base_url('admin/reports') ?>" class="btn btn-outline-success w-100 mb-2">
                                             <i class="bi bi-file-earmark-bar-graph me-2"></i>View Reports
                                         </a>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <a href="<?= base_url('admin/users/add') ?>" class="btn btn-outline-info w-100 mb-2">
                                             <i class="bi bi-person-plus me-2"></i>Add User
                                         </a>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
+                                        <a href="<?= base_url('admin/inventory') ?>" class="btn btn-outline-warning w-100 mb-2">
+                                            <i class="bi bi-box-seam me-2"></i>Manage Inventory
+                                        </a>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <a href="<?= base_url('admin/inventory/report') ?>" class="btn btn-outline-secondary w-100 mb-2">
+                                            <i class="bi bi-clipboard-data me-2"></i>Inventory Report
+                                        </a>
+                                    </div>
+                                    <div class="col-md-2">
                                         <button type="button" class="btn btn-outline-danger w-100 mb-2" data-bs-toggle="modal" data-bs-target="#emailReportModal">
                                             <i class="bi bi-envelope me-2"></i>Send Daily Report
                                         </button>

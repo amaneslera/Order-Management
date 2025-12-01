@@ -34,7 +34,7 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="text-center mb-4">
-                    <a href="/pos" class="btn btn-outline-secondary">
+                    <a href="<?= base_url('pos') ?>" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
                     </a>
                 </div>
@@ -54,7 +54,7 @@
                         </div>
                     <?php endif; ?>
 
-                    <form action="/pos/search" method="GET">
+                    <form action="<?= base_url('pos/search') ?>" method="GET">
                         <div class="mb-4">
                             <label for="order_number" class="form-label h5">Order Number</label>
                             <div class="input-group input-group-lg">
@@ -65,7 +65,7 @@
                                        class="form-control form-control-lg" 
                                        id="order_number" 
                                        name="order_number" 
-                                       placeholder="ORD20241030ABCDEF" 
+                                       placeholder="A001" 
                                        autofocus 
                                        required>
                             </div>
@@ -80,7 +80,7 @@
                         </button>
 
                         <div class="text-center">
-                            <a href="/pos" class="text-decoration-none">
+                            <a href="<?= base_url('pos') ?>" class="text-decoration-none">
                                 <i class="bi bi-house me-1"></i>Back to Dashboard
                             </a>
                         </div>
@@ -91,10 +91,10 @@
                     <div class="text-center">
                         <h6 class="text-muted mb-3">Quick Actions</h6>
                         <div class="d-grid gap-2">
-                            <a href="/pos/orders?status=pending" class="btn btn-outline-warning">
+                            <a href="<?= base_url('pos/orders?status=pending') ?>" class="btn btn-outline-warning">
                                 <i class="bi bi-clock-history me-2"></i>View Pending Orders
                             </a>
-                            <a href="/pos/orders" class="btn btn-outline-primary">
+                            <a href="<?= base_url('pos/orders') ?>" class="btn btn-outline-primary">
                                 <i class="bi bi-list-ul me-2"></i>View All Orders
                             </a>
                         </div>

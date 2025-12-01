@@ -41,14 +41,17 @@
                     <hr class="border-light">
                 </div>
                 <nav class="nav flex-column">
-                    <a href="/admin/dashboard" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-                    <a href="/admin/reports" class="nav-link"><i class="bi bi-graph-up me-2"></i>Reports</a>
-                    <a href="/admin/menu" class="nav-link active"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
-                    <a href="/admin/users" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
-                    <a href="/admin/activity-logs" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
-                    <a href="/pos" class="nav-link"><i class="bi bi-shop me-2"></i>POS System</a>
+                    <a href="<?= base_url('admin') ?>" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+                    <a href="<?= base_url('admin/reports') ?>" class="nav-link"><i class="bi bi-graph-up me-2"></i>Reports</a>
+                    <a href="<?= base_url('admin/menu') ?>" class="nav-link active"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
+                    <a href="<?= base_url('admin/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/users') ?>" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
+                    <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
+                    <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-shop me-2"></i>POS System</a>
                     <hr class="border-light">
-                    <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
+                    <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
+                    <hr class="border-light">
+                    <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
             </div>
 
@@ -59,7 +62,7 @@
                         <h2>Menu Management</h2>
                         <p class="text-muted">Manage coffee and snack items</p>
                     </div>
-                    <a href="/admin/menu/add" class="btn btn-primary btn-lg">
+                    <a href="<?= base_url('admin/menu/add') ?>" class="btn btn-primary btn-lg">
                         <i class="bi bi-plus-circle me-2"></i>Add New Item
                     </a>
                 </div>

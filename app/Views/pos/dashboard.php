@@ -87,7 +87,7 @@
                         <form action="<?= base_url('pos/search') ?>" method="GET" class="row g-3">
                             <div class="col-md-8">
                                 <input type="text" name="order_number" class="form-control form-control-lg" 
-                                       placeholder="Enter or scan order number (e.g., ORD-20251030-XXXX)" 
+                                       placeholder="Enter or scan order number (e.g., A001, B234)" 
                                        autofocus 
                                        required>
                             </div>
@@ -178,7 +178,7 @@
                                             </p>
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <strong class="text-primary">₱<?= number_format($order['total_amount'], 2) ?></strong>
-                                                <a href="/pos/order/<?= $order['id'] ?>" class="btn btn-sm btn-outline-primary">
+                                                <a href="<?= base_url('pos/order/' . $order['id']) ?>" class="btn btn-sm btn-outline-primary">
                                                     View Details <i class="bi bi-arrow-right ms-1"></i>
                                                 </a>
                                             </div>

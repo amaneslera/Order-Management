@@ -66,7 +66,18 @@ include 'connect.php';
                         <a class="nav-link" href="dashboard.php">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../../dashboard">← Back to Main Dashboard</a>
+                        <?php
+                        // Redirect based on user role
+                        $dashboardUrl = '../../admin'; // Default to admin
+                        if (isset($_SESSION['role'])) {
+                            if ($_SESSION['role'] == 'cashier' || strtolower($_SESSION['role']) == 'cashier') {
+                                $dashboardUrl = '../../cashier';
+                            } elseif ($_SESSION['role'] == 'admin' || $_SESSION['role'] == 'Admin') {
+                                $dashboardUrl = '../../admin';
+                            }
+                        }
+                        ?>
+                        <a class="nav-link" href="<?= $dashboardUrl ?>">← Back to Main Dashboard</a>
                     </li>
                 </ul>
             </div>

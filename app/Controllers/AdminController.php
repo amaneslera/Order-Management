@@ -8,6 +8,8 @@ use App\Models\PaymentModel;
 use App\Models\UserModel;
 use App\Models\ActivityLogModel;
 use App\Models\SMSLogModel;
+use App\Models\MenuItemModel;
+use App\Models\InventoryLogModel;
 use App\Libraries\EmailService;
 
 class AdminController extends BaseController
@@ -19,6 +21,8 @@ class AdminController extends BaseController
     protected $activityLog;
     protected $emailService;
     protected $smsLogModel;
+    protected $menuModel;
+    protected $inventoryLog;
 
     public function __construct()
     {
@@ -29,6 +33,8 @@ class AdminController extends BaseController
         $this->activityLog = new ActivityLogModel();
         $this->emailService = new EmailService();
         $this->smsLogModel = new SMSLogModel();
+        $this->menuModel = new MenuItemModel();
+        $this->inventoryLog = new InventoryLogModel();
     }
 
     // Check if user is admin
@@ -65,6 +71,11 @@ class AdminController extends BaseController
         $startDate = date('Y-m-d', strtotime('-30 days'));
         $endDate = date('Y-m-d');
         $data['top_selling'] = $this->orderItemModel->getTopSellingItems(5, $startDate, $endDate);
+
+        // Inventory alerts
+        $data['low_stock_count'] = count($this->menuModel->getLowStockItems());
+        $data['out_of_stock_count'] = count($this->menuModel->getOutOfStockItems());
+        $data['low_stock_items'] = $this->menuModel->getLowStockItems();
 
         return view('admin/dashboard', $data);
     }
@@ -345,6 +356,165 @@ class AdminController extends BaseController
         $data['statistics'] = $this->smsLogModel->getStatistics();
 
         return view('admin/sms_logs', $data);
+    }
+
+    // Inventory Management
+    public function inventory()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $data['menu_items'] = $this->menuModel->findAll();
+        $data['low_stock_items'] = $this->menuModel->getLowStockItems();
+        $data['out_of_stock_items'] = $this->menuModel->getOutOfStockItems();
+        $data['recent_logs'] = $this->inventoryLog->getLogsWithDetails(50);
+
+        return view('admin/inventory', $data);
+    }
+
+    // Update stock quantity
+    public function updateStock()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $itemId = $this->request->getPost('item_id');
+        $action = $this->request->getPost('action'); // 'add' or 'set'
+        $quantity = $this->request->getPost('quantity');
+        $notes = $this->request->getPost('notes');
+
+        if (!$itemId || !$quantity || !$action) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Missing required fields'
+            ]);
+        }
+
+        $menuItem = $this->menuModel->find($itemId);
+        if (!$menuItem) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Item not found'
+            ]);
+        }
+
+        $previousStock = $menuItem['stock_quantity'];
+        $newStock = 0;
+        $quantityChange = 0;
+        $logAction = '';
+
+        if ($action === 'add') {
+            // Add to existing stock
+            $newStock = $previousStock + $quantity;
+            $quantityChange = $quantity;
+            $logAction = 'add';
+        } elseif ($action === 'set') {
+            // Set absolute value
+            $newStock = $quantity;
+            $quantityChange = $quantity - $previousStock;
+            $logAction = 'adjust';
+        } else {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Invalid action'
+            ]);
+        }
+
+        // Update stock
+        if ($this->menuModel->updateStock($itemId, $newStock)) {
+            // Log the change
+            $this->inventoryLog->logInventoryChange(
+                $itemId,
+                $logAction,
+                $quantityChange,
+                $previousStock,
+                $newStock,
+                session()->get('user_id'),
+                null,
+                $notes
+            );
+
+            $this->activityLog->logActivity(
+                session()->get('user_id'),
+                'update_inventory',
+                "Updated stock for {$menuItem['name']}: {$previousStock} → {$newStock}"
+            );
+
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Stock updated successfully',
+                'new_stock' => $newStock
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Failed to update stock'
+        ]);
+    }
+
+    // Get low stock alerts
+    public function lowStockAlerts()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $data['low_stock_items'] = $this->menuModel->getLowStockItems();
+        $data['out_of_stock_items'] = $this->menuModel->getOutOfStockItems();
+
+        return view('admin/low_stock_alerts', $data);
+    }
+
+    // Inventory activity report
+    public function inventoryReport()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $startDate = $this->request->getGet('start_date') ?? date('Y-m-d', strtotime('-7 days'));
+        $endDate = $this->request->getGet('end_date') ?? date('Y-m-d');
+        $action = $this->request->getGet('action') ?? '';
+
+        // Get filtered logs
+        $logs = $this->inventoryLog->getActivityReport($startDate, $endDate);
+        
+        // Filter by action if specified
+        if (!empty($action)) {
+            $logs = array_filter($logs, function($log) use ($action) {
+                return $log['action'] === $action;
+            });
+        }
+
+        // Calculate summary statistics
+        $summary = [
+            'total_added' => 0,
+            'total_deducted' => 0,
+            'total_transactions' => count($logs)
+        ];
+
+        foreach ($logs as $log) {
+            if ($log['action'] === 'add') {
+                $summary['total_added'] += abs($log['quantity_change']);
+            } elseif ($log['action'] === 'deduct') {
+                $summary['total_deducted'] += abs($log['quantity_change']);
+            }
+        }
+
+        $data['logs'] = $logs;
+        $data['summary'] = $summary;
+        $data['start_date'] = $startDate;
+        $data['end_date'] = $endDate;
+        $data['action'] = $action;
+
+        // Log activity
+        $this->activityLog->logActivity(
+            session()->get('id'),
+            'admin',
+            'view_inventory_report',
+            'Viewed inventory report from ' . $startDate . ' to ' . $endDate
+        );
+
+        return view('admin/inventory_report', $data);
     }
 }
 

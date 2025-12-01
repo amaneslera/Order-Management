@@ -58,8 +58,11 @@ class OrderItemModel extends Model
                             ->limit($limit);
 
         if ($startDate && $endDate) {
+            // Ensure end date includes the entire day (23:59:59)
+            $endDateTime = date('Y-m-d', strtotime($endDate)) . ' 23:59:59';
+            
             $builder->where('orders.created_at >=', $startDate)
-                    ->where('orders.created_at <=', $endDate);
+                    ->where('orders.created_at <=', $endDateTime);
         }
 
         return $builder->get()->getResultArray();

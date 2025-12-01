@@ -43,8 +43,11 @@ class ActivityLogModel extends Model
     // Get logs by date range
     public function getLogsByDateRange($startDate, $endDate)
     {
+        // Ensure end date includes the entire day (23:59:59)
+        $endDateTime = date('Y-m-d', strtotime($endDate)) . ' 23:59:59';
+        
         return $this->where('created_at >=', $startDate)
-                    ->where('created_at <=', $endDate)
+                    ->where('created_at <=', $endDateTime)
                     ->orderBy('created_at', 'DESC')
                     ->findAll();
     }

@@ -66,9 +66,12 @@ class OrderModel extends Model
     // Get sales report
     public function getSalesReport($startDate, $endDate)
     {
+        // Ensure end date includes the entire day (23:59:59)
+        $endDateTime = date('Y-m-d', strtotime($endDate)) . ' 23:59:59';
+        
         return $this->select('DATE(created_at) as date, COUNT(*) as total_orders, SUM(total_amount) as total_sales')
                     ->where('created_at >=', $startDate)
-                    ->where('created_at <=', $endDate)
+                    ->where('created_at <=', $endDateTime)
                     ->where('status !=', 'cancelled')
                     ->groupBy('DATE(created_at)')
                     ->orderBy('date', 'ASC')
@@ -78,9 +81,54 @@ class OrderModel extends Model
     // Generate unique order number
     public function generateOrderNumber()
     {
-        $prefix = 'ORD';
-        $date = date('Ymd');
-        $random = strtoupper(substr(uniqid(), -6));
-        return $prefix . $date . $random;
+        // Format: LNNN (e.g., A001, B234, Z999)
+        // 1 letter + 3 digits = 4 characters total
+        // Supports 26,000 orders (A000-Z999)
+        
+        // Get the latest order to determine next sequence
+        $latestOrder = $this->orderBy('id', 'DESC')->first();
+        
+        if ($latestOrder && preg_match('/^([A-Z])(\d{3})$/', $latestOrder['order_number'], $matches)) {
+            $letter = $matches[1];
+            $number = (int) $matches[2];
+            
+            // Increment number
+            $number++;
+            
+            // If number exceeds 999, move to next letter
+            if ($number > 999) {
+                $number = 0;
+                $letter = chr(ord($letter) + 1);
+                
+                // If letter exceeds Z, wrap to A (though 26,000 orders is unlikely)
+                if ($letter > 'Z') {
+                    $letter = 'A';
+                }
+            }
+        } else {
+            // Start with A000
+            $letter = 'A';
+            $number = 0;
+        }
+        
+        // Format as LNNN (e.g., A001)
+        $orderNumber = $letter . str_pad($number, 3, '0', STR_PAD_LEFT);
+        
+        // Safety check: ensure uniqueness (in case of race conditions)
+        $attempts = 0;
+        while ($this->where('order_number', $orderNumber)->first() && $attempts < 100) {
+            $number++;
+            if ($number > 999) {
+                $number = 0;
+                $letter = chr(ord($letter) + 1);
+                if ($letter > 'Z') {
+                    $letter = 'A';
+                }
+            }
+            $orderNumber = $letter . str_pad($number, 3, '0', STR_PAD_LEFT);
+            $attempts++;
+        }
+        
+        return $orderNumber;
     }
 }

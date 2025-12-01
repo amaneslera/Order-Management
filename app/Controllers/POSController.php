@@ -7,6 +7,7 @@ use App\Models\OrderItemModel;
 use App\Models\PaymentModel;
 use App\Models\MenuItemModel;
 use App\Models\ActivityLogModel;
+use App\Models\InventoryLogModel;
 
 class POSController extends BaseController
 {
@@ -15,6 +16,7 @@ class POSController extends BaseController
     protected $paymentModel;
     protected $menuModel;
     protected $activityLog;
+    protected $inventoryLog;
 
     public function __construct()
     {
@@ -23,6 +25,7 @@ class POSController extends BaseController
         $this->paymentModel = new PaymentModel();
         $this->menuModel = new MenuItemModel();
         $this->activityLog = new ActivityLogModel();
+        $this->inventoryLog = new InventoryLogModel();
     }
 
     // Check if user is logged in as cashier
@@ -196,6 +199,20 @@ class POSController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Order not found']);
         }
 
+        // Get order items to deduct stock
+        $orderItems = $this->orderItemModel->where('order_id', $orderId)->findAll();
+
+        // Verify stock availability before processing payment
+        foreach ($orderItems as $item) {
+            if (!$this->menuModel->hasSufficientStock($item['menu_item_id'], $item['quantity'])) {
+                $menuItem = $this->menuModel->find($item['menu_item_id']);
+                return $this->response->setJSON([
+                    'success' => false, 
+                    'message' => "Insufficient stock for {$menuItem['name']}. Current stock: {$menuItem['stock_quantity']}"
+                ]);
+            }
+        }
+
         // Create payment record
         $paymentData = [
             'order_id'       => $orderId,
@@ -207,18 +224,43 @@ class POSController extends BaseController
         $paymentId = $this->paymentModel->insert($paymentData);
 
         if ($paymentId) {
+            // Deduct stock for each item in the order
+            foreach ($orderItems as $item) {
+                $menuItem = $this->menuModel->find($item['menu_item_id']);
+                $previousStock = $menuItem['stock_quantity'];
+                
+                // Deduct stock
+                $this->menuModel->deductStock($item['menu_item_id'], $item['quantity']);
+                
+                // Get new stock
+                $updatedItem = $this->menuModel->find($item['menu_item_id']);
+                $newStock = $updatedItem['stock_quantity'];
+                
+                // Log inventory change
+                $this->inventoryLog->logInventoryChange(
+                    $item['menu_item_id'],
+                    'deduct',
+                    -$item['quantity'],
+                    $previousStock,
+                    $newStock,
+                    session()->get('user_id'),
+                    $orderId,
+                    "Stock deducted for order #{$order['order_number']}"
+                );
+            }
+
             // Update order status to paid
             $this->orderModel->update($orderId, ['status' => 'paid']);
 
             $this->activityLog->logActivity(
                 session()->get('user_id'),
                 'process_payment',
-                "Payment processed for order #$orderId via $paymentMethod"
+                "Payment processed for order #$orderId via $paymentMethod. Stock deducted for all items."
             );
 
             return $this->response->setJSON([
                 'success' => true,
-                'message' => 'Payment processed successfully',
+                'message' => 'Payment processed successfully and inventory updated',
                 'payment_id' => $paymentId
             ]);
         }

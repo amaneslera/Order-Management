@@ -33,8 +33,11 @@ class PaymentModel extends Model
     // Get payments by date range
     public function getPaymentsByDateRange($startDate, $endDate)
     {
+        // Ensure end date includes the entire day (23:59:59)
+        $endDateTime = date('Y-m-d', strtotime($endDate)) . ' 23:59:59';
+        
         return $this->where('payment_date >=', $startDate)
-                    ->where('payment_date <=', $endDate)
+                    ->where('payment_date <=', $endDateTime)
                     ->findAll();
     }
 
@@ -45,8 +48,11 @@ class PaymentModel extends Model
                         ->groupBy('payment_method');
 
         if ($startDate && $endDate) {
+            // Ensure end date includes the entire day (23:59:59)
+            $endDateTime = date('Y-m-d', strtotime($endDate)) . ' 23:59:59';
+            
             $builder->where('payment_date >=', $startDate)
-                    ->where('payment_date <=', $endDate);
+                    ->where('payment_date <=', $endDateTime);
         }
 
         return $builder->findAll();

@@ -59,6 +59,14 @@ class KioskController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Item not found']);
         }
 
+        // Check stock availability
+        if (!$this->menuModel->hasSufficientStock($itemId, $quantity)) {
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Sorry, insufficient stock available for this item'
+            ]);
+        }
+
         $cart = session()->get('cart') ?? [];
         
         $cartItemKey = $itemId . '_' . md5($addons);
@@ -131,6 +139,15 @@ class KioskController extends BaseController
             return redirect()->back()->with('error', 'Cart is empty');
         }
 
+        // Verify stock availability for all items
+        foreach ($cart as $item) {
+            if (!$this->menuModel->hasSufficientStock($item['id'], $item['quantity'])) {
+                $menuItem = $this->menuModel->find($item['id']);
+                return redirect()->back()->with('error', 
+                    "Insufficient stock for {$menuItem['name']}. Please update your cart.");
+            }
+        }
+
         // Generate order number
         $orderNumber = $this->orderModel->generateOrderNumber();
 
@@ -147,7 +164,7 @@ class KioskController extends BaseController
         $orderId = $this->orderModel->insert($orderData);
 
         if ($orderId) {
-            // Add order items
+            // Add order items (stock will be reserved but not deducted until payment)
             foreach ($cart as $item) {
                 $orderItemData = [
                     'order_id'     => $orderId,
