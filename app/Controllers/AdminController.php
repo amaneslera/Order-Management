@@ -7,6 +7,7 @@ use App\Models\OrderItemModel;
 use App\Models\PaymentModel;
 use App\Models\UserModel;
 use App\Models\ActivityLogModel;
+use App\Models\SMSLogModel;
 use App\Libraries\EmailService;
 
 class AdminController extends BaseController
@@ -17,6 +18,7 @@ class AdminController extends BaseController
     protected $userModel;
     protected $activityLog;
     protected $emailService;
+    protected $smsLogModel;
 
     public function __construct()
     {
@@ -26,6 +28,7 @@ class AdminController extends BaseController
         $this->userModel = new UserModel();
         $this->activityLog = new ActivityLogModel();
         $this->emailService = new EmailService();
+        $this->smsLogModel = new SMSLogModel();
     }
 
     // Check if user is admin
@@ -327,6 +330,21 @@ class AdminController extends BaseController
             'top_items' => $topItems,
             'payment_methods' => $paymentMethods,
         ];
+    }
+
+    // View SMS logs from staff
+    public function smsLogs()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        // Get all SMS logs with staff information
+        $data['sms_logs'] = $this->smsLogModel->getAllLogsWithStaff(200);
+        
+        // Get statistics
+        $data['statistics'] = $this->smsLogModel->getStatistics();
+
+        return view('admin/sms_logs', $data);
     }
 }
 

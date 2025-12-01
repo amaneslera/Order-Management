@@ -43,11 +43,22 @@ $routes->group('pos', function($routes) {
     $routes->get('orders', 'POSController::listOrders');
 });
 
+// Staff SMS Routes (for cashiers/staff to message admin)
+$routes->group('staff', function($routes) {
+    $routes->get('send-sms', 'StaffMessagingController::index');
+    $routes->post('send-sms', 'StaffMessagingController::sendToAdmin');
+    $routes->get('sms-logs', 'StaffMessagingController::logs');
+    $routes->get('sms-balance', 'StaffMessagingController::checkBalance');
+});
+
 // Admin Routes (Coffee Kiosk Management)
 $routes->group('admin', function($routes) {
     $routes->get('coffee-dashboard', 'AdminController::dashboard');
     $routes->get('reports', 'AdminController::reports');
     $routes->get('activity-logs', 'AdminController::activityLogs');
+    
+    // Admin SMS Logs
+    $routes->get('sms-logs', 'AdminController::smsLogs');
     
     // User Management
     $routes->get('users', 'AdminController::users');

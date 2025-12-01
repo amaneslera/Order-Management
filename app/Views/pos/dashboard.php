@@ -47,6 +47,7 @@
                 </div>
                 <nav class="nav flex-column">
                     <a href="<?= base_url('pos') ?>" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+                    <a href="<?= base_url('staff/send-sms') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>Message Admin</a>
                     <a href="<?= base_url('pos/search') ?>" class="nav-link"><i class="bi bi-search me-2"></i>Search Order</a>
                     <a href="<?= base_url('pos/orders') ?>" class="nav-link"><i class="bi bi-list-ul me-2"></i>All Orders</a>
                     <?php if (session()->get('role') === 'Admin'): ?>
