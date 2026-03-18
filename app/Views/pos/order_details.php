@@ -311,7 +311,7 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2 mb-3">
-                            <button id="cancel-order-btn" type="button" class="btn btn-outline-danger" onclick="cancelOrder()">
+                            <button id="cancel-order-btn" type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reasonModal" data-action="cancel">
                                 <i class="bi bi-x-circle me-2"></i>Cancel Order
                             </button>
                             <a href="<?= base_url('pos/payment/' . $order['id']) ?>" class="btn btn-success">
@@ -339,6 +339,51 @@
                             <span class="summary-label">Paid At</span>
                             <span class="summary-value"><?= !empty($payment['payment_date']) ? date('M d, Y h:i A', strtotime($payment['payment_date'])) : 'N/A' ?></span>
                         </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <button id="refund-order-btn" type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reasonModal" data-action="refund">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Refund Order
+                            </button>
+                            <a href="<?= base_url('pos/order/repeat/' . $order['id']) ?>" class="btn btn-primary">
+                                <i class="bi bi-arrow-repeat me-2"></i>Repeat Order
+                            </a>
+                        </div>
+                                                        <!-- Reason Modal -->
+                                                        <div class="modal fade" id="reasonModal" tabindex="-1" aria-labelledby="reasonModalLabel" aria-hidden="true">
+                                                            <div class="modal-dialog">
+                                                                <div class="modal-content">
+                                                                    <div class="modal-header">
+                                                                        <h5 class="modal-title" id="reasonModalLabel">Select Reason</h5>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                    </div>
+                                                                    <div class="modal-body">
+                                                                        <form id="reasonForm">
+                                                                            <input type="hidden" id="reason-action" name="action" value="">
+                                                                            <input type="hidden" name="order_id" value="<?= (int)$order['id'] ?>">
+                                                                            <div class="mb-3">
+                                                                                <label for="reason-code" class="form-label">Reason Code</label>
+                                                                                <select class="form-select" id="reason-code" name="reason_code" required>
+                                                                                    <option value="">Select reason</option>
+                                                                                    <option value="customer_request">Customer Request</option>
+                                                                                    <option value="damaged">Damaged</option>
+                                                                                    <option value="mistake">Cashier Mistake</option>
+                                                                                    <option value="other">Other</option>
+                                                                                </select>
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label for="reason-notes" class="form-label">Notes (optional)</label>
+                                                                                <textarea class="form-control" id="reason-notes" name="reason_notes" rows="2"></textarea>
+                                                                            </div>
+                                                                            <button type="submit" class="btn btn-danger w-100">Confirm</button>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <a href="<?= base_url('pos/order/repeat/' . $order['id']) ?>" class="btn btn-primary">
+                                <i class="bi bi-arrow-repeat me-2"></i>Repeat Order
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -350,6 +395,44 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+                // Modal action setup
+                document.addEventListener('DOMContentLoaded', function() {
+                    var reasonModal = document.getElementById('reasonModal');
+                    var reasonForm = document.getElementById('reasonForm');
+                    var cancelBtn = document.getElementById('cancel-order-btn');
+                    var refundBtn = document.getElementById('refund-order-btn');
+                    if (reasonModal && reasonForm) {
+                        reasonModal.addEventListener('show.bs.modal', function (event) {
+                            var button = event.relatedTarget;
+                            var action = button ? button.getAttribute('data-action') : '';
+                            document.getElementById('reason-action').value = action;
+                        });
+                        reasonForm.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            var formData = new FormData(reasonForm);
+                            var action = formData.get('action');
+                            var url = '';
+                            if (action === 'cancel') {
+                                url = '<?= base_url('pos/order/cancel') ?>';
+                            } else if (action === 'refund') {
+                                url = '<?= base_url('pos/order/refund') ?>';
+                            }
+                            fetch(url, {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    window.location.reload();
+                                } else {
+                                    showFeedback(data.message || 'Action failed', 'danger');
+                                }
+                            })
+                            .catch(() => showFeedback('Action failed', 'danger'));
+                        });
+                    }
+                });
         const qtyUpdateTimers = {};
 
         function showFeedback(message, type = 'success') {

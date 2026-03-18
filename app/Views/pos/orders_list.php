@@ -42,7 +42,7 @@
                 </div>
                 <nav class="nav flex-column">
                     <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-                    <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-cart-plus me-2"></i>Walk-in Customer Order</a>
+                    <a href="<?= base_url('pos/order/new') ?>" class="nav-link"><i class="bi bi-cart-plus me-2"></i>New Counter Order</a>
                     <a href="<?= base_url('staff/send-sms') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>Message Admin</a>
                     <a href="<?= base_url('pos/search') ?>" class="nav-link"><i class="bi bi-search me-2"></i>Search Order</a>
                     <a href="<?= base_url('pos/orders') ?>" class="nav-link active"><i class="bi bi-list-ul me-2"></i>All Orders</a>
@@ -51,6 +51,7 @@
                     <?php endif; ?>
                     <hr class="border-light">
                     <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Scan Barcode</a>
+                    <hr class="border-light">
                     <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
                 <div class="p-4 mt-auto">

@@ -34,6 +34,7 @@ $routes->group('kiosk', function($routes) {
 $routes->group('pos', function($routes) {
     $routes->get('/', 'POSController::index');
     $routes->get('order/new', 'POSController::createCounterOrder');
+    $routes->get('order/repeat/(:num)', 'POSController::repeatOrder/$1');
     $routes->get('search', 'POSController::searchOrder');
     $routes->get('order/(:num)', 'POSController::viewOrder/$1');
     $routes->post('order/status/update', 'POSController::updateOrderStatus');
@@ -44,6 +45,8 @@ $routes->group('pos', function($routes) {
     $routes->post('payment/process', 'POSController::processPayment');
     $routes->get('receipt/(:num)', 'POSController::viewReceipt/$1');
     $routes->get('orders', 'POSController::listOrders');
+    $routes->post('order/cancel', 'POSController::cancelOrder');
+    $routes->post('order/refund', 'POSController::refundOrder');
 });
 
 // Staff SMS Routes (for cashiers/staff to message admin)

@@ -8,44 +8,75 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root { --primary: #6B4423; }
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        .sidebar {
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: linear-gradient(180deg, var(--primary) 0%, #3E2723 100%);
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 5px 10px;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .search-icon {
+            font-size: 3rem;
+            color: var(--primary);
         }
         .search-card {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-        }
-        .search-icon {
-            font-size: 4rem;
-            color: var(--primary);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 24px;
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="text-center mb-4">
-                    <a href="<?= base_url('pos') ?>" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
-                    </a>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0 d-flex flex-column">
+                <div class="p-4">
+                    <h4><i class="bi bi-shop me-2"></i>POS System</h4>
+                    <hr class="border-light">
                 </div>
+                <nav class="nav flex-column">
+                    <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+                    <a href="<?= base_url('pos/order/new') ?>" class="nav-link"><i class="bi bi-cart-plus me-2"></i>New Counter Order</a>
+                    <a href="<?= base_url('staff/send-sms') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>Message Admin</a>
+                    <a href="<?= base_url('pos/search') ?>" class="nav-link active"><i class="bi bi-search me-2"></i>Search Order</a>
+                    <a href="<?= base_url('pos/orders') ?>" class="nav-link"><i class="bi bi-list-ul me-2"></i>All Orders</a>
+                    <?php if (session()->get('role') === 'Admin'): ?>
+                        <a href="<?= base_url('admin') ?>" class="nav-link"><i class="bi bi-gear me-2"></i>Admin Panel</a>
+                    <?php endif; ?>
+                    <hr class="border-light">
+                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Scan Barcode</a>
+                    <hr class="border-light">
+                    <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
+                </nav>
+                <div class="p-4 mt-auto">
+                    <small class="text-light">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <?= esc((session()->get('username') ?? session()->get('name'))) ?><br>
+                        <span class="badge bg-light text-dark mt-1"><?= ucfirst(session()->get('role')) ?></span>
+                    </small>
+                </div>
+            </div>
 
-                <div class="search-card">
-                    <div class="text-center mb-4">
-                        <i class="bi bi-search search-icon"></i>
-                        <h2 class="mt-3">Search Order</h2>
-                        <p class="text-muted">Enter or scan the order number</p>
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2><i class="bi bi-search me-2"></i>Search Order</h2>
+                        <p class="text-muted mb-0">Enter or scan the order number</p>
                     </div>
-
+                </div>
+                <div class="search-card mb-4" style="max-width:600px; margin:0 auto;">
                     <?php if (session()->getFlashdata('error')): ?>
                         <div class="alert alert-danger alert-dismissible fade show">
                             <i class="bi bi-exclamation-triangle me-2"></i>
@@ -53,7 +84,6 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     <?php endif; ?>
-
                     <form action="<?= base_url('pos/search') ?>" method="GET">
                         <div class="mb-4">
                             <label for="order_number" class="form-label h5">Order Number</label>
@@ -74,20 +104,16 @@
                                 You can manually type or scan the barcode
                             </small>
                         </div>
-
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
                             <i class="bi bi-search me-2"></i>Search Order
                         </button>
-
                         <div class="text-center">
                             <a href="<?= base_url('pos') ?>" class="text-decoration-none">
                                 <i class="bi bi-house me-1"></i>Back to Dashboard
                             </a>
                         </div>
                     </form>
-
                     <hr class="my-4">
-
                     <div class="text-center">
                         <h6 class="text-muted mb-3">Quick Actions</h6>
                         <div class="d-grid gap-2">
@@ -100,7 +126,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="text-center mt-4">
                     <small class="text-muted">
                         Logged in as: <strong><?= esc((session()->get('username') ?? session()->get('name'))) ?></strong>

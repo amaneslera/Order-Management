@@ -42,7 +42,7 @@
                 <a href="<?= base_url('admin/users') ?>" class="nav-link active"><i class="bi bi-people me-2"></i>Users</a>
                 <a href="<?= base_url('admin/sms-logs') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>SMS Logs</a>
                 <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
-                <a href="<?= base_url('pos') ?>" class="nav-link" target="_blank"><i class="bi bi-shop me-2"></i>Open Cashier POS</a>
+                <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-shop me-2"></i>Open Cashier POS</a>
                 <hr class="border-light">
                 <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
                 <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode Scanner</a>

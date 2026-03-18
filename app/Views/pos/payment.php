@@ -208,7 +208,14 @@
 
                         <form id="paymentForm" class="mt-3">
                             <input type="hidden" name="order_id" value="<?= (int) $order['id'] ?>">
-                            <input type="hidden" name="payment_method" value="cash">
+                            <div class="mb-3">
+                                <label class="form-label">Mode of Payment</label>
+                                <select class="form-select form-select-lg" id="payment-method" name="payment_method" required>
+                                    <option value="cash">Cash</option>
+                                    <option value="gcash">GCash</option>
+                                    <option value="card">Card</option>
+                                </select>
+                            </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Amount Received</label>

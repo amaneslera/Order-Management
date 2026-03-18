@@ -11,6 +11,133 @@ use App\Models\InventoryLogModel;
 
 class POSController extends BaseController
 {
+    // Cancel unpaid order (with stock reversal and reason logging)
+    public function cancelOrder()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $orderId = $this->request->getPost('order_id');
+        $reasonCode = $this->request->getPost('reason_code');
+        $reasonNotes = $this->request->getPost('reason_notes');
+
+        $order = $this->orderModel->getOrderWithItems($orderId);
+        if (!$order || $order['status'] !== 'pending') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Only unpaid (pending) orders can be cancelled']);
+        }
+
+        // Restore stock for all items
+        foreach ($order['items'] as $item) {
+            $this->menuModel->addStock($item['menu_item_id'], $item['quantity']);
+            $this->inventoryLog->logInventoryChange(
+                $item['menu_item_id'],
+                'return',
+                $item['quantity'],
+                null,
+                null,
+                session()->get('user_id'),
+                $orderId,
+                'Stock returned on order cancellation'
+            );
+        }
+
+        $this->orderModel->update($orderId, ['status' => 'cancelled']);
+        $this->activityLog->logActivity(
+            session()->get('user_id'),
+            'cancel_order',
+            "Order #{$order['order_number']} cancelled. Reason: $reasonCode. $reasonNotes"
+        );
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Order cancelled and stock restored']);
+    }
+
+    // Refund paid order (with stock reversal and reason logging)
+    public function refundOrder()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $orderId = $this->request->getPost('order_id');
+        $reasonCode = $this->request->getPost('reason_code');
+        $reasonNotes = $this->request->getPost('reason_notes');
+
+        $order = $this->orderModel->getOrderWithItems($orderId);
+        if (!$order || $order['status'] !== 'paid') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Only paid orders can be refunded']);
+        }
+
+        // Restore stock for all items
+        foreach ($order['items'] as $item) {
+            $this->menuModel->addStock($item['menu_item_id'], $item['quantity']);
+            $this->inventoryLog->logInventoryChange(
+                $item['menu_item_id'],
+                'return',
+                $item['quantity'],
+                null,
+                null,
+                session()->get('user_id'),
+                $orderId,
+                'Stock returned on order refund'
+            );
+        }
+
+        $this->orderModel->update($orderId, ['status' => 'refunded']);
+        $this->activityLog->logActivity(
+            session()->get('user_id'),
+            'refund_order',
+            "Order #{$order['order_number']} refunded. Reason: $reasonCode. $reasonNotes"
+        );
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Order refunded and stock restored']);
+    }
+    // Repeat a previous order
+    public function repeatOrder($orderId)
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        // Get the original order and its items
+        $originalOrder = $this->orderModel->getOrderWithItems($orderId);
+        if (!$originalOrder || empty($originalOrder['items'])) {
+            return redirect()->to(base_url('pos'))->with('error', 'Original order not found or has no items');
+        }
+
+        // Create new order
+        $orderNumber = $this->orderModel->generateOrderNumber();
+        $newOrderId = $this->orderModel->insert([
+            'order_number' => $orderNumber,
+            'status' => 'pending',
+            'total_amount' => 0,
+        ]);
+
+        if (!$newOrderId) {
+            return redirect()->to(base_url('pos'))->with('error', 'Failed to create repeated order');
+        }
+
+        // Clone items
+        foreach ($originalOrder['items'] as $item) {
+            $this->orderItemModel->insert([
+                'order_id' => $newOrderId,
+                'menu_item_id' => $item['menu_item_id'],
+                'quantity' => $item['quantity'],
+                'price' => $item['price'],
+                'addons' => $item['addons'] ?? '',
+                'notes' => $item['notes'] ?? '',
+            ]);
+        }
+
+        // Update total
+        $this->updateOrderTotal($newOrderId);
+
+        $this->activityLog->logActivity(
+            session()->get('user_id'),
+            'repeat_order',
+            "Repeated order #{$originalOrder['order_number']} as #{$orderNumber}"
+        );
+
+        // Redirect to new order details
+        return redirect()->to(base_url('pos/order/' . $newOrderId));
+    }
     protected $orderModel;
     protected $orderItemModel;
     protected $paymentModel;
