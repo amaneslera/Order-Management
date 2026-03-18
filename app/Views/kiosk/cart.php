@@ -150,8 +150,9 @@
                     <div class="cart-item">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <?php if (!empty($item['image'])): ?>
-                                    <img src="/uploads/menu/<?= esc($item['image']) ?>" alt="<?= esc($item['name']) ?>" 
+                                <?php $imageExists = !empty($item['image']) && is_file(FCPATH . 'uploads/menu/' . $item['image']); ?>
+                                <?php if ($imageExists): ?>
+                                    <img src="<?= base_url('uploads/menu/' . esc($item['image'])) ?>" alt="<?= esc($item['name']) ?>" 
                                          style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px;" class="me-3">
                                 <?php else: ?>
                                     <div style="width: 80px; height: 80px; background: #e0e0e0; border-radius: 10px;" class="me-3 d-flex align-items-center justify-content-center">
