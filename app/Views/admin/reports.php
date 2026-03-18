@@ -39,20 +39,22 @@
                     <a href="<?= base_url('admin') ?>" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
                     <a href="<?= base_url('admin/reports') ?>" class="nav-link active"><i class="bi bi-graph-up me-2"></i>Reports</a>
                     <a href="<?= base_url('admin/menu') ?>" class="nav-link"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
-                    <a href="<?= base_url('admin/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/alerts') ?>" class="nav-link"><i class="bi bi-exclamation-triangle me-2"></i>Stock Alerts</a>
                     <a href="<?= base_url('admin/users') ?>" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
+                    <a href="<?= base_url('admin/sms-logs') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>SMS Logs</a>
                     <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
-                    <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-shop me-2"></i>POS System</a>
-                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link"><i class="bi bi-camera me-2"></i>Scan Barcode</a>
+                    <a href="<?= base_url('pos') ?>" class="nav-link" target="_blank"><i class="bi bi-shop me-2"></i>Open Cashier POS</a>
                     <hr class="border-light">
                     <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
+                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode Scanner</a>
                     <hr class="border-light">
                     <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
                 <div class="p-4 mt-auto">
                     <small class="text-light">
                         <i class="bi bi-person-circle me-2"></i>
-                        <?= esc(session()->get('name')) ?><br>
+                        <?= esc((session()->get('username') ?? session()->get('name'))) ?><br>
                         <span class="badge bg-danger mt-1"><?= ucfirst(session()->get('role')) ?></span>
                     </small>
                 </div>
@@ -84,11 +86,17 @@
                                 <label class="form-label">End Date</label>
                                 <input type="date" name="end_date" class="form-control" value="<?= $end_date ?>" required>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">&nbsp;</label>
                                 <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-search me-2"></i>Generate Report
+                                    <i class="bi bi-search me-2"></i>Generate
                                 </button>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label">&nbsp;</label>
+                                <a href="<?= base_url('admin/reports?type=' . $report_type . '&start_date=' . $start_date . '&end_date=' . $end_date . '&export=csv') ?>" class="btn btn-success w-100">
+                                    <i class="bi bi-download me-2"></i>Export
+                                </a>
                             </div>
                         </form>
                     </div>
@@ -132,6 +140,7 @@
                     </div>
                     <div class="card-body">
                         <canvas id="salesChart" height="80"></canvas>
+                        <div id="salesChartHint" class="alert alert-info mt-3 mb-0 d-none"></div>
                     </div>
                 </div>
 
@@ -242,7 +251,7 @@
             </button>
         </div>
         <div class="card-body p-0" style="height: 400px;">
-            <iframe src="<?= base_url('Realtime-chat-application-main/users.php?user=' . session()->get('name') . '&role=' . session()->get('role')) ?>" 
+            <iframe src="<?= base_url('Realtime-chat-application-main/users.php?user=' . rawurlencode((string) (session()->get('username') ?? session()->get('name'))) . '&role=' . rawurlencode((string) session()->get('role'))) ?>" 
                     style="width:100%; height:100%; border:none;"></iframe>
         </div>
     </div>
@@ -264,18 +273,40 @@
         });
 
         // Sales Chart
+        const salesLabels = <?= json_encode(array_column($sales_report, 'date')) ?>;
+        const salesValues = <?= json_encode(array_column($sales_report, 'total_sales')) ?>;
+        const reportType = <?= json_encode($report_type) ?>;
+        const salesChartHint = document.getElementById('salesChartHint');
+        const isSinglePoint = salesLabels.length === 1;
+        const isNoData = salesLabels.length === 0;
+        const salesChartType = isSinglePoint ? 'bar' : 'line';
+
+        if (isNoData) {
+            salesChartHint.classList.remove('d-none');
+            salesChartHint.innerHTML = '<i class="bi bi-info-circle me-2"></i>No sales data found for this date range.';
+        } else if (isSinglePoint) {
+            salesChartHint.classList.remove('d-none');
+            salesChartHint.innerHTML = '<i class="bi bi-info-circle me-2"></i>Only 1 data point in selected range, so the trend is shown as a bar for clarity.';
+        } else if (reportType === 'daily') {
+            salesChartHint.classList.remove('d-none');
+            salesChartHint.innerHTML = '<i class="bi bi-lightbulb me-2"></i>Tip: switch to Weekly or Monthly for a clearer trend line.';
+        }
+
         const salesCtx = document.getElementById('salesChart').getContext('2d');
         new Chart(salesCtx, {
-            type: 'line',
+            type: salesChartType,
             data: {
-                labels: <?= json_encode(array_column($sales_report, 'date')) ?>,
+                labels: salesLabels,
                 datasets: [{
                     label: 'Sales (₱)',
-                    data: <?= json_encode(array_column($sales_report, 'total_sales')) ?>,
+                    data: salesValues,
                     borderColor: '#6B4423',
                     backgroundColor: 'rgba(107, 68, 35, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: !isSinglePoint,
+                    borderWidth: 2,
+                    maxBarThickness: 80,
+                    pointRadius: isSinglePoint ? 0 : 3
                 }]
             },
             options: {

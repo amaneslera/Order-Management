@@ -45,9 +45,15 @@
                     <a href="<?= base_url('admin') ?>" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
                     <a href="<?= base_url('admin/reports') ?>" class="nav-link"><i class="bi bi-graph-up me-2"></i>Reports</a>
                     <a href="<?= base_url('admin/menu') ?>" class="nav-link"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
+                    <a href="<?= base_url('admin/menu/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/alerts') ?>" class="nav-link"><i class="bi bi-exclamation-triangle me-2"></i>Stock Alerts</a>
                     <a href="<?= base_url('admin/users') ?>" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
                     <a href="<?= base_url('admin/sms-logs') ?>" class="nav-link active"><i class="bi bi-chat-text me-2"></i>SMS Logs</a>
                     <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
+                    <a href="<?= base_url('pos') ?>" class="nav-link" target="_blank"><i class="bi bi-shop me-2"></i>Open Cashier POS</a>
+                    <hr class="border-light">
+                    <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
+                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode Scanner</a>
                     <hr class="border-light">
                     <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
@@ -112,18 +118,46 @@
                     <div class="card-header bg-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="bi bi-list me-2"></i>All Messages</h5>
-                            <div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="filterLogs('all')">All</button>
-                                <button class="btn btn-sm btn-outline-success" onclick="filterLogs('SENT')">Sent</button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="filterLogs('FAILED')">Failed</button>
-                            </div>
+                            <small class="text-muted">Showing up to latest 200 records</small>
                         </div>
                     </div>
                     <div class="card-body">
+                        <form method="GET" action="<?= base_url('admin/sms-logs') ?>" class="row g-2 mb-3">
+                            <div class="col-md-2">
+                                <label class="form-label mb-1">Status</label>
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="" <?= ($selected_status ?? '') === '' ? 'selected' : '' ?>>All</option>
+                                    <option value="SENT" <?= ($selected_status ?? '') === 'SENT' ? 'selected' : '' ?>>Sent</option>
+                                    <option value="FAILED" <?= ($selected_status ?? '') === 'FAILED' ? 'selected' : '' ?>>Failed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-1">Sort</label>
+                                <select name="sort" class="form-select form-select-sm">
+                                    <option value="newest" <?= ($selected_sort ?? 'newest') === 'newest' ? 'selected' : '' ?>>Newest</option>
+                                    <option value="oldest" <?= ($selected_sort ?? '') === 'oldest' ? 'selected' : '' ?>>Oldest</option>
+                                    <option value="staff" <?= ($selected_sort ?? '') === 'staff' ? 'selected' : '' ?>>Staff Name</option>
+                                    <option value="status" <?= ($selected_sort ?? '') === 'status' ? 'selected' : '' ?>>Status</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1">Date From</label>
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="<?= esc($selected_date_from ?? '') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1">Date To</label>
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="<?= esc($selected_date_to ?? '') ?>">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end gap-2">
+                                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel me-1"></i>Apply</button>
+                                <a href="<?= base_url('admin/sms-logs') ?>" class="btn btn-sm btn-outline-secondary w-100">Reset</a>
+                            </div>
+                        </form>
+
                         <?php if (empty($sms_logs)): ?>
                             <p class="text-muted text-center py-5">
                                 <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-                                No SMS messages received yet
+                                No SMS messages found for current filters
                             </p>
                         <?php else: ?>
                             <div class="table-responsive">
@@ -144,9 +178,9 @@
                                             <td>
                                                 <small>
                                                     <i class="bi bi-calendar me-1"></i>
-                                                    <?= date('M d, Y', strtotime($log['created_at'])) ?><br>
+                                                    <?= !empty($log['created_at']) ? date('M d, Y', strtotime($log['created_at'])) : '-' ?><br>
                                                     <i class="bi bi-clock me-1"></i>
-                                                    <?= date('h:i A', strtotime($log['created_at'])) ?>
+                                                    <?= !empty($log['created_at']) ? date('h:i A', strtotime($log['created_at'])) : '-' ?>
                                                 </small>
                                             </td>
                                             <td>
@@ -210,17 +244,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function filterLogs(status) {
-            const rows = document.querySelectorAll('#smsTable tbody tr');
-            rows.forEach(row => {
-                if (status === 'all' || row.dataset.status === status) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
         function viewDetails(log) {
             const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
             const modalBody = document.getElementById('modalBody');

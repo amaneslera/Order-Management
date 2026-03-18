@@ -20,7 +20,8 @@ class SMSLogModel extends Model
         'status', 
         'error_message', 
         'sms_id', 
-        'sent_at'
+        'sent_at',
+        'created_at'
     ];
 
     // Dates
@@ -103,6 +104,52 @@ class SMSLogModel extends Model
                     ->orderBy('staff_sms_logs.created_at', 'DESC')
                     ->limit($limit)
                     ->findAll();
+    }
+
+    /**
+     * Get filtered logs with staff information.
+     *
+     * @param array $filters
+     * @param int $limit
+     * @return array
+     */
+    public function getFilteredLogsWithStaff(array $filters = [], $limit = 200)
+    {
+        $builder = $this->select('staff_sms_logs.*, users.username, users.role')
+                        ->join('users', 'users.id = staff_sms_logs.staff_id', 'left');
+
+        if (!empty($filters['status']) && in_array($filters['status'], ['SENT', 'FAILED'], true)) {
+            $builder->where('staff_sms_logs.status', $filters['status']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $builder->where('DATE(staff_sms_logs.created_at) >=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $builder->where('DATE(staff_sms_logs.created_at) <=', $filters['date_to']);
+        }
+
+        $sort = $filters['sort'] ?? 'newest';
+        switch ($sort) {
+            case 'oldest':
+                $builder->orderBy('staff_sms_logs.created_at', 'ASC');
+                break;
+            case 'status':
+                $builder->orderBy('staff_sms_logs.status', 'ASC')
+                        ->orderBy('staff_sms_logs.created_at', 'DESC');
+                break;
+            case 'staff':
+                $builder->orderBy('staff_sms_logs.staff_name', 'ASC')
+                        ->orderBy('staff_sms_logs.created_at', 'DESC');
+                break;
+            case 'newest':
+            default:
+                $builder->orderBy('staff_sms_logs.created_at', 'DESC');
+                break;
+        }
+
+        return $builder->limit($limit)->findAll();
     }
 
     /**

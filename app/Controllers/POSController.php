@@ -49,6 +49,32 @@ class POSController extends BaseController
         return view('pos/dashboard', $data);
     }
 
+    // Create a new counter order (for walk-in customers) and open it in POS order details.
+    public function createCounterOrder()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $orderNumber = $this->orderModel->generateOrderNumber();
+        $orderId = $this->orderModel->insert([
+            'order_number' => $orderNumber,
+            'status' => 'pending',
+            'total_amount' => 0,
+        ]);
+
+        if (!$orderId) {
+            return redirect()->to(base_url('pos'))->with('error', 'Failed to create a new counter order');
+        }
+
+        $this->activityLog->logActivity(
+            session()->get('user_id'),
+            'create_counter_order',
+            "Created counter order #{$orderNumber}"
+        );
+
+        return redirect()->to(base_url('pos/order/' . $orderId));
+    }
+
     // Search order by order number
     public function searchOrder()
     {
@@ -84,8 +110,27 @@ class POSController extends BaseController
 
         $data['order'] = $order;
         $data['menu_items'] = $this->menuModel->getAvailableItems();
+        $data['payment'] = $this->paymentModel->getPaymentByOrder($orderId);
         
         return view('pos/order_details', $data);
+    }
+
+    // View payment form
+    public function viewPayment($orderId)
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $order = $this->orderModel->getOrderWithItems($orderId);
+
+        if (!$order) {
+            return redirect()->to(base_url('pos'))->with('error', 'Order not found');
+        }
+
+        $data['order'] = $order;
+        $data['payment'] = $this->paymentModel->getPaymentByOrder($orderId);
+        
+        return view('pos/payment', $data);
     }
 
     // Update order status
@@ -128,6 +173,20 @@ class POSController extends BaseController
 
         if (!$menuItem) {
             return $this->response->setJSON(['success' => false, 'message' => 'Menu item not found']);
+        }
+
+        $existingQty = (int) ($this->orderItemModel
+            ->selectSum('quantity')
+            ->where('order_id', $orderId)
+            ->where('menu_item_id', $menuItemId)
+            ->first()['quantity'] ?? 0);
+
+        $intendedQty = $existingQty + (int) $quantity;
+        if ((int) $menuItem['stock_quantity'] < $intendedQty) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => "Only {$menuItem['stock_quantity']} stock available for {$menuItem['name']}"
+            ]);
         }
 
         $orderItemData = [
@@ -183,6 +242,65 @@ class POSController extends BaseController
         return $this->response->setJSON(['success' => false, 'message' => 'Item not found']);
     }
 
+    // Update quantity of an order item
+    public function updateOrderItemQuantity()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) return $authCheck;
+
+        $itemId = (int) $this->request->getPost('item_id');
+        $quantity = (int) $this->request->getPost('quantity');
+
+        if ($quantity < 1) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Quantity must be at least 1']);
+        }
+
+        $orderItem = $this->orderItemModel->find($itemId);
+        if (!$orderItem) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Order item not found']);
+        }
+
+        $order = $this->orderModel->find($orderItem['order_id']);
+        if (!$order || $order['status'] !== 'pending') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Only pending orders can be edited']);
+        }
+
+        $menuItem = $this->menuModel->find($orderItem['menu_item_id']);
+        if (!$menuItem) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Menu item not found']);
+        }
+
+        $otherQtyRow = $this->orderItemModel
+            ->selectSum('quantity')
+            ->where('order_id', $orderItem['order_id'])
+            ->where('menu_item_id', $orderItem['menu_item_id'])
+            ->where('id !=', $itemId)
+            ->first();
+        $otherQty = (int) ($otherQtyRow['quantity'] ?? 0);
+
+        if ((int) $menuItem['stock_quantity'] < ($otherQty + $quantity)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => "Only {$menuItem['stock_quantity']} stock available for {$menuItem['name']}"
+            ]);
+        }
+
+        $updated = $this->orderItemModel->update($itemId, ['quantity' => $quantity]);
+        if (!$updated) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to update quantity']);
+        }
+
+        $this->updateOrderTotal($orderItem['order_id']);
+
+        $this->activityLog->logActivity(
+            session()->get('user_id'),
+            'update_order_item_quantity',
+            "Updated quantity for item #{$itemId} in order #{$orderItem['order_id']}"
+        );
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Quantity updated']);
+    }
+
     // Process payment
     public function processPayment()
     {
@@ -197,6 +315,16 @@ class POSController extends BaseController
 
         if (!$order) {
             return $this->response->setJSON(['success' => false, 'message' => 'Order not found']);
+        }
+
+        if (($order['status'] ?? null) !== 'pending') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Only pending orders can be paid']);
+        }
+
+        $amount = (float) $amount;
+        $orderTotal = (float) ($order['total_amount'] ?? 0);
+        if ($amount < $orderTotal) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Amount received is less than order total']);
         }
 
         // Get order items to deduct stock

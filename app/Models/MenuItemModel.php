@@ -56,8 +56,8 @@ class MenuItemModel extends Model
     // Get low stock items
     public function getLowStockItems()
     {
-        return $this->where('stock_quantity <=', $this->db->table('menu_items')->selectMax('low_stock_threshold'))
-                    ->where('stock_quantity < low_stock_threshold')
+        return $this->where('stock_quantity >', 0)
+                    ->where('stock_quantity <= low_stock_threshold', null, false)
                     ->where('status', 'available')
                     ->orderBy('stock_quantity', 'ASC')
                     ->findAll();

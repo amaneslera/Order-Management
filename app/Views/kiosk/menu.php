@@ -28,15 +28,51 @@
             height: 100%;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
+        .menu-item-card.out-of-stock {
+            opacity: 0.75;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
         .menu-item-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        .menu-item-card.out-of-stock:hover {
+            transform: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .menu-item-image-wrap {
+            position: relative;
         }
         .menu-item-image {
             width: 100%;
             height: 200px;
             object-fit: cover;
             background: linear-gradient(135deg, #e0e0e0 0%, #d0d0d0 100%);
+        }
+        .stock-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(20, 20, 20, 0.58);
+        }
+        .stock-overlay.hidden {
+            display: none;
+        }
+        .stock-overlay span {
+            background: #dc3545;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+        }
+        .stock-caption {
+            font-size: 0.8rem;
+            font-weight: 600;
         }
         .category-btn {
             border-radius: 25px;
@@ -81,9 +117,41 @@
             color: white;
             transform: scale(1.05);
         }
+        .btn-add-cart:disabled {
+            background: #9ca3af;
+            color: #f5f5f5;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.95;
+        }
+        .notification-stack {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1080;
+            width: min(360px, calc(100vw - 24px));
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .notification-stack .alert {
+            margin: 0;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            pointer-events: auto;
+        }
+        @media (max-width: 576px) {
+            .notification-stack {
+                right: 12px;
+                left: 12px;
+                width: auto;
+            }
+        }
     </style>
 </head>
 <body>
+    <div id="notification-stack" class="notification-stack" aria-live="polite" aria-atomic="true"></div>
+
     <!-- Header -->
     <div class="kiosk-header">
         <div class="container">
@@ -95,7 +163,7 @@
                 <div>
                     <a href="<?= base_url('kiosk/cart') ?>" class="btn btn-light btn-lg position-relative">
                         <i class="bi bi-cart3 me-2"></i>Cart
-                        <span class="cart-badge" id="cart-count">0</span>
+                        <span class="cart-badge" id="cart-count"><?= (int) ($cart_count ?? 0) ?></span>
                     </a>
                     <a href="<?= base_url('login') ?>" class="btn btn-outline-light btn-lg ms-2">
                         <i class="bi bi-person-circle me-2"></i>Staff Login
@@ -127,26 +195,39 @@
         <!-- Menu Items Grid -->
         <div class="row g-4" id="menu-grid">
             <?php foreach ($menu_items as $item): ?>
+            <?php $imageExists = ! empty($item['image']) && is_file(FCPATH . 'uploads/menu/' . $item['image']); ?>
+            <?php $remainingStock = (int) ($item['remaining_stock'] ?? 0); ?>
+            <?php $isOutOfStock = $remainingStock <= 0; ?>
             <div class="col-md-4 col-lg-3 menu-item" data-category="<?= esc($item['category']) ?>">
-                <div class="card menu-item-card">
-                    <div class="menu-item-image d-flex align-items-center justify-content-center">
-                        <?php if ($item['image']): ?>
-                            <img src="<?= base_url('uploads/menu/' . esc($item['image'])) ?>" alt="<?= esc($item['name']) ?>" class="menu-item-image">
-                        <?php else: ?>
-                            <i class="bi bi-cup-hot text-muted" style="font-size: 3rem;"></i>
-                        <?php endif; ?>
+                <div class="card menu-item-card <?= $isOutOfStock ? 'out-of-stock' : '' ?>">
+                    <div class="menu-item-image-wrap">
+                        <div class="menu-item-image d-flex align-items-center justify-content-center">
+                            <?php if ($imageExists): ?>
+                                <img src="<?= base_url('uploads/menu/' . esc($item['image'])) ?>" alt="<?= esc($item['name']) ?>" class="menu-item-image">
+                            <?php else: ?>
+                                <i class="bi bi-cup-hot text-muted" style="font-size: 3rem;"></i>
+                            <?php endif; ?>
+                        </div>
+                        <div class="stock-overlay <?= $isOutOfStock ? '' : 'hidden' ?>" id="stock-overlay-<?= (int) $item['id'] ?>">
+                            <span>Out of Stock</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         <h5 class="card-title mb-1"><?= esc($item['name']) ?></h5>
                         <p class="text-muted small mb-2">
                             <i class="bi bi-tag-fill me-1"></i><?= esc($item['category']) ?>
                         </p>
+                        <?php if (!$isOutOfStock): ?>
+                            <p class="stock-caption text-success mb-2" id="stock-caption-<?= (int) $item['id'] ?>">Available: <?= $remainingStock ?></p>
+                        <?php else: ?>
+                            <p class="stock-caption text-danger mb-2" id="stock-caption-<?= (int) $item['id'] ?>">Not available</p>
+                        <?php endif; ?>
                         <?php if ($item['description']): ?>
                             <p class="card-text small text-secondary"><?= esc($item['description']) ?></p>
                         <?php endif; ?>
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <h4 class="text-primary mb-0">₱<?= number_format($item['price'], 2) ?></h4>
-                            <button class="btn btn-add-cart" onclick="addToCart(<?= $item['id'] ?>, '<?= esc($item['name']) ?>', <?= $item['price'] ?>)">
+                            <button id="add-btn-<?= (int) $item['id'] ?>" class="btn btn-add-cart" onclick="addToCart(<?= $item['id'] ?>, '<?= esc($item['name']) ?>', <?= $item['price'] ?>)" <?= $isOutOfStock ? 'disabled aria-disabled="true"' : '' ?>>
                                 <i class="bi bi-plus-circle me-1"></i>Add
                             </button>
                         </div>
@@ -193,8 +274,10 @@
             .then(data => {
                 if (data.success) {
                     updateCartCount(data.cart_count);
+                    updateItemStockState(itemId, data.remaining_stock ?? null);
                     showNotification(`${itemName} added to cart!`, 'success');
                 } else {
+                    updateItemStockState(itemId, data.remaining_stock ?? null);
                     showNotification(data.message || 'Failed to add item', 'error');
                 }
             })
@@ -209,19 +292,62 @@
             document.getElementById('cart-count').textContent = count;
         }
 
+        function updateItemStockState(itemId, remainingStock) {
+            if (remainingStock === null || remainingStock === undefined) {
+                return;
+            }
+
+            const remaining = Math.max(0, Number(remainingStock));
+            const addButton = document.getElementById(`add-btn-${itemId}`);
+            const stockCaption = document.getElementById(`stock-caption-${itemId}`);
+            const stockOverlay = document.getElementById(`stock-overlay-${itemId}`);
+            const card = addButton ? addButton.closest('.menu-item-card') : null;
+
+            if (stockCaption) {
+                if (remaining <= 0) {
+                    stockCaption.textContent = 'Not available';
+                    stockCaption.classList.remove('text-success');
+                    stockCaption.classList.add('text-danger');
+                } else {
+                    stockCaption.textContent = `Available: ${remaining}`;
+                    stockCaption.classList.remove('text-danger');
+                    stockCaption.classList.add('text-success');
+                }
+            }
+
+            if (addButton) {
+                addButton.disabled = remaining <= 0;
+                addButton.setAttribute('aria-disabled', remaining <= 0 ? 'true' : 'false');
+            }
+
+            if (stockOverlay) {
+                stockOverlay.classList.toggle('hidden', remaining > 0);
+            }
+
+            if (card) {
+                card.classList.toggle('out-of-stock', remaining <= 0);
+            }
+        }
+
         // Show notification
         function showNotification(message, type) {
+            const container = document.getElementById('notification-stack');
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
-            alertDiv.style.zIndex = '9999';
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+            alertDiv.setAttribute('role', 'alert');
             alertDiv.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            document.body.appendChild(alertDiv);
+            container.appendChild(alertDiv);
+
+            alertDiv.addEventListener('closed.bs.alert', () => {
+                alertDiv.remove();
+            });
 
             setTimeout(() => {
-                alertDiv.remove();
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+                bsAlert.close();
             }, 3000);
         }
 

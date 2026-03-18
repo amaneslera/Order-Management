@@ -9,7 +9,6 @@ use App\Models\UserModel;
 use App\Models\ActivityLogModel;
 use App\Models\SMSLogModel;
 use App\Models\MenuItemModel;
-use App\Models\InventoryLogModel;
 use App\Libraries\EmailService;
 
 class AdminController extends BaseController
@@ -22,7 +21,6 @@ class AdminController extends BaseController
     protected $emailService;
     protected $smsLogModel;
     protected $menuModel;
-    protected $inventoryLog;
 
     public function __construct()
     {
@@ -34,7 +32,6 @@ class AdminController extends BaseController
         $this->emailService = new EmailService();
         $this->smsLogModel = new SMSLogModel();
         $this->menuModel = new MenuItemModel();
-        $this->inventoryLog = new InventoryLogModel();
     }
 
     // Check if user is admin
@@ -89,21 +86,28 @@ class AdminController extends BaseController
         $reportType = $this->request->getGet('type') ?? 'daily';
         $startDate = $this->request->getGet('start_date');
         $endDate = $this->request->getGet('end_date');
+        $export = $this->request->getGet('export');
 
         // Set default date range
         if (!$startDate || !$endDate) {
+            $anchorDate = date('Y-m-d');
+            $latestOrder = $this->orderModel->orderBy('created_at', 'DESC')->first();
+            if (!empty($latestOrder['created_at'])) {
+                $anchorDate = date('Y-m-d', strtotime($latestOrder['created_at']));
+            }
+
             switch ($reportType) {
                 case 'daily':
-                    $startDate = date('Y-m-d');
-                    $endDate = date('Y-m-d');
+                    $startDate = $anchorDate;
+                    $endDate = $anchorDate;
                     break;
                 case 'weekly':
-                    $startDate = date('Y-m-d', strtotime('-7 days'));
-                    $endDate = date('Y-m-d');
+                    $startDate = date('Y-m-d', strtotime($anchorDate . ' -6 days'));
+                    $endDate = $anchorDate;
                     break;
                 case 'monthly':
-                    $startDate = date('Y-m-01');
-                    $endDate = date('Y-m-t');
+                    $startDate = date('Y-m-01', strtotime($anchorDate));
+                    $endDate = date('Y-m-t', strtotime($anchorDate));
                     break;
             }
         }
@@ -131,7 +135,73 @@ class AdminController extends BaseController
         $data['start_date'] = $startDate;
         $data['end_date'] = $endDate;
 
+        // Export functionality
+        if ($export === 'csv') {
+            return $this->exportReportToCSV($data);
+        }
+
         return view('admin/reports', $data);
+    }
+
+    // Export report to CSV
+    private function exportReportToCSV($data)
+    {
+        $filename = 'sales_report_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Write header
+        fputcsv($output, ['SALES REPORT', $data['report_type'], $data['start_date'] . ' to ' . $data['end_date']]);
+        fputcsv($output, []);
+        fputcsv($output, ['SUMMARY']);
+        fputcsv($output, ['Total Revenue', '₱' . number_format($data['total_sales'], 2)]);
+        fputcsv($output, ['Total Orders', $data['total_orders']]);
+        fputcsv($output, ['Average Order Value', '₱' . number_format($data['total_orders'] > 0 ? $data['total_sales'] / $data['total_orders'] : 0, 2)]);
+        fputcsv($output, []);
+        
+        // Daily breakdown
+        fputcsv($output, ['DAILY BREAKDOWN']);
+        fputcsv($output, ['Date', 'Orders', 'Sales', 'Avg Order Value']);
+        foreach ($data['sales_report'] as $row) {
+            fputcsv($output, [
+                date('M d, Y', strtotime($row['date'])),
+                $row['total_orders'],
+                '₱' . number_format($row['total_sales'], 2),
+                '₱' . number_format($row['total_sales'] / $row['total_orders'], 2)
+            ]);
+        }
+        fputcsv($output, []);
+        
+        // Top selling items
+        fputcsv($output, ['TOP SELLING ITEMS']);
+        fputcsv($output, ['Rank', 'Item', 'Category', 'Sold', 'Revenue']);
+        foreach ($data['top_selling'] as $index => $item) {
+            fputcsv($output, [
+                $index + 1,
+                $item['name'],
+                $item['category'],
+                $item['total_quantity'],
+                '₱' . number_format($item['total_revenue'], 2)
+            ]);
+        }
+        fputcsv($output, []);
+        
+        // Payment methods
+        fputcsv($output, ['PAYMENT METHODS']);
+        fputcsv($output, ['Payment Method', 'Count', 'Total']);
+        foreach ($data['payment_methods'] as $method) {
+            fputcsv($output, [
+                ucfirst($method['payment_method']),
+                $method['count'],
+                '₱' . number_format($method['total'], 2)
+            ]);
+        }
+        
+        fclose($output);
+        exit;
     }
 
     // Activity logs
@@ -162,28 +232,35 @@ class AdminController extends BaseController
         $authCheck = $this->checkAuth();
         if ($authCheck) return $authCheck;
 
-        if ($this->request->getMethod() === 'post') {
+        if (strtoupper($this->request->getMethod()) === 'POST') {
+            $username = trim((string) $this->request->getPost('username'));
+            $password = (string) $this->request->getPost('password');
+            $role = (string) $this->request->getPost('role');
+
+            if ($username === '' || $password === '') {
+                return redirect()->to('/admin/users')->with('error', 'Username and password are required');
+            }
+
             $userData = [
-                'name'     => $this->request->getPost('name'),
-                'email'    => $this->request->getPost('email'),
-                'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
-                'role'     => $this->request->getPost('role'),
+                'username' => $username,
+                'password' => password_hash($password, PASSWORD_DEFAULT),
+                'role'     => in_array($role, ['Admin', 'cashier'], true) ? $role : 'cashier',
             ];
 
             if ($this->userModel->insert($userData)) {
                 $this->activityLog->logActivity(
                     session()->get('user_id'),
                     'add_user',
-                    "Added new user: {$userData['email']}"
+                    "Added new user: {$userData['username']}"
                 );
                 
                 return redirect()->to('/admin/users')->with('success', 'User added successfully');
             }
 
-            return redirect()->back()->with('error', 'Failed to add user');
+            return redirect()->to('/admin/users')->with('error', 'Failed to add user');
         }
 
-        return view('admin/add_user');
+        return redirect()->to('/admin/users');
     }
 
     // Edit user
@@ -198,11 +275,17 @@ class AdminController extends BaseController
             return redirect()->to('/admin/users')->with('error', 'User not found');
         }
 
-        if ($this->request->getMethod() === 'post') {
+        if (strtoupper($this->request->getMethod()) === 'POST') {
+            $username = trim((string) $this->request->getPost('username'));
+            $role = (string) $this->request->getPost('role');
+
+            if ($username === '') {
+                return redirect()->to('/admin/users')->with('error', 'Username is required');
+            }
+
             $userData = [
-                'name'  => $this->request->getPost('name'),
-                'email' => $this->request->getPost('email'),
-                'role'  => $this->request->getPost('role'),
+                'username' => $username,
+                'role'  => in_array($role, ['Admin', 'cashier'], true) ? $role : 'cashier',
             ];
 
             $password = $this->request->getPost('password');
@@ -214,17 +297,16 @@ class AdminController extends BaseController
                 $this->activityLog->logActivity(
                     session()->get('user_id'),
                     'edit_user',
-                    "Updated user: {$userData['email']}"
+                    "Updated user: {$userData['username']}"
                 );
 
                 return redirect()->to('/admin/users')->with('success', 'User updated successfully');
             }
 
-            return redirect()->back()->with('error', 'Failed to update user');
+            return redirect()->to('/admin/users')->with('error', 'Failed to update user');
         }
 
-        $data['user'] = $user;
-        return view('admin/edit_user', $data);
+        return redirect()->to('/admin/users');
     }
 
     // Delete user
@@ -244,7 +326,7 @@ class AdminController extends BaseController
             $this->activityLog->logActivity(
                 session()->get('user_id'),
                 'delete_user',
-                "Deleted user: {$user['email']}"
+                'Deleted user: ' . ($user['username'] ?? ('ID ' . $userId))
             );
 
             return redirect()->to('/admin/users')->with('success', 'User deleted successfully');
@@ -349,172 +431,37 @@ class AdminController extends BaseController
         $authCheck = $this->checkAuth();
         if ($authCheck) return $authCheck;
 
-        // Get all SMS logs with staff information
-        $data['sms_logs'] = $this->smsLogModel->getAllLogsWithStaff(200);
+        $status = strtoupper((string) ($this->request->getGet('status') ?? ''));
+        if (!in_array($status, ['', 'SENT', 'FAILED'], true)) {
+            $status = '';
+        }
+
+        $dateFrom = (string) ($this->request->getGet('date_from') ?? '');
+        $dateTo = (string) ($this->request->getGet('date_to') ?? '');
+        $sort = (string) ($this->request->getGet('sort') ?? 'newest');
+        if (!in_array($sort, ['newest', 'oldest', 'status', 'staff'], true)) {
+            $sort = 'newest';
+        }
+
+        $filters = [
+            'status' => $status,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'sort' => $sort,
+        ];
+
+        // Get filtered SMS logs with staff information
+        $data['sms_logs'] = $this->smsLogModel->getFilteredLogsWithStaff($filters, 200);
         
         // Get statistics
         $data['statistics'] = $this->smsLogModel->getStatistics();
+        $data['selected_status'] = $status;
+        $data['selected_date_from'] = $dateFrom;
+        $data['selected_date_to'] = $dateTo;
+        $data['selected_sort'] = $sort;
 
         return view('admin/sms_logs', $data);
     }
 
-    // Inventory Management
-    public function inventory()
-    {
-        $authCheck = $this->checkAuth();
-        if ($authCheck) return $authCheck;
-
-        $data['menu_items'] = $this->menuModel->findAll();
-        $data['low_stock_items'] = $this->menuModel->getLowStockItems();
-        $data['out_of_stock_items'] = $this->menuModel->getOutOfStockItems();
-        $data['recent_logs'] = $this->inventoryLog->getLogsWithDetails(50);
-
-        return view('admin/inventory', $data);
-    }
-
-    // Update stock quantity
-    public function updateStock()
-    {
-        $authCheck = $this->checkAuth();
-        if ($authCheck) return $authCheck;
-
-        $itemId = $this->request->getPost('item_id');
-        $action = $this->request->getPost('action'); // 'add' or 'set'
-        $quantity = $this->request->getPost('quantity');
-        $notes = $this->request->getPost('notes');
-
-        if (!$itemId || !$quantity || !$action) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Missing required fields'
-            ]);
-        }
-
-        $menuItem = $this->menuModel->find($itemId);
-        if (!$menuItem) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Item not found'
-            ]);
-        }
-
-        $previousStock = $menuItem['stock_quantity'];
-        $newStock = 0;
-        $quantityChange = 0;
-        $logAction = '';
-
-        if ($action === 'add') {
-            // Add to existing stock
-            $newStock = $previousStock + $quantity;
-            $quantityChange = $quantity;
-            $logAction = 'add';
-        } elseif ($action === 'set') {
-            // Set absolute value
-            $newStock = $quantity;
-            $quantityChange = $quantity - $previousStock;
-            $logAction = 'adjust';
-        } else {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Invalid action'
-            ]);
-        }
-
-        // Update stock
-        if ($this->menuModel->updateStock($itemId, $newStock)) {
-            // Log the change
-            $this->inventoryLog->logInventoryChange(
-                $itemId,
-                $logAction,
-                $quantityChange,
-                $previousStock,
-                $newStock,
-                session()->get('user_id'),
-                null,
-                $notes
-            );
-
-            $this->activityLog->logActivity(
-                session()->get('user_id'),
-                'update_inventory',
-                "Updated stock for {$menuItem['name']}: {$previousStock} → {$newStock}"
-            );
-
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Stock updated successfully',
-                'new_stock' => $newStock
-            ]);
-        }
-
-        return $this->response->setJSON([
-            'success' => false,
-            'message' => 'Failed to update stock'
-        ]);
-    }
-
-    // Get low stock alerts
-    public function lowStockAlerts()
-    {
-        $authCheck = $this->checkAuth();
-        if ($authCheck) return $authCheck;
-
-        $data['low_stock_items'] = $this->menuModel->getLowStockItems();
-        $data['out_of_stock_items'] = $this->menuModel->getOutOfStockItems();
-
-        return view('admin/low_stock_alerts', $data);
-    }
-
-    // Inventory activity report
-    public function inventoryReport()
-    {
-        $authCheck = $this->checkAuth();
-        if ($authCheck) return $authCheck;
-
-        $startDate = $this->request->getGet('start_date') ?? date('Y-m-d', strtotime('-7 days'));
-        $endDate = $this->request->getGet('end_date') ?? date('Y-m-d');
-        $action = $this->request->getGet('action') ?? '';
-
-        // Get filtered logs
-        $logs = $this->inventoryLog->getActivityReport($startDate, $endDate);
-        
-        // Filter by action if specified
-        if (!empty($action)) {
-            $logs = array_filter($logs, function($log) use ($action) {
-                return $log['action'] === $action;
-            });
-        }
-
-        // Calculate summary statistics
-        $summary = [
-            'total_added' => 0,
-            'total_deducted' => 0,
-            'total_transactions' => count($logs)
-        ];
-
-        foreach ($logs as $log) {
-            if ($log['action'] === 'add') {
-                $summary['total_added'] += abs($log['quantity_change']);
-            } elseif ($log['action'] === 'deduct') {
-                $summary['total_deducted'] += abs($log['quantity_change']);
-            }
-        }
-
-        $data['logs'] = $logs;
-        $data['summary'] = $summary;
-        $data['start_date'] = $startDate;
-        $data['end_date'] = $endDate;
-        $data['action'] = $action;
-
-        // Log activity
-        $this->activityLog->logActivity(
-            session()->get('id'),
-            'admin',
-            'view_inventory_report',
-            'Viewed inventory report from ' . $startDate . ' to ' . $endDate
-        );
-
-        return view('admin/inventory_report', $data);
-    }
 }
 

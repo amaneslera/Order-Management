@@ -44,21 +44,22 @@
                     <a href="<?= base_url('admin') ?>" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
                     <a href="<?= base_url('admin/reports') ?>" class="nav-link"><i class="bi bi-graph-up me-2"></i>Reports</a>
                     <a href="<?= base_url('admin/menu') ?>" class="nav-link"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
-                    <a href="<?= base_url('admin/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/alerts') ?>" class="nav-link"><i class="bi bi-exclamation-triangle me-2"></i>Stock Alerts</a>
                     <a href="<?= base_url('admin/users') ?>" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
+                    <a href="<?= base_url('admin/sms-logs') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>SMS Logs</a>
                     <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link"><i class="bi bi-activity me-2"></i>Activity Logs</a>
-                    <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-shop me-2"></i>POS System</a>
+                    <a href="<?= base_url('pos') ?>" class="nav-link" target="_blank"><i class="bi bi-shop me-2"></i>Open Cashier POS</a>
                     <hr class="border-light">
                     <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
-                    <a href="<?= base_url('barcode-master/dashboard.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode System</a>
-                    <a href="#" id="openChatLink" class="nav-link"><i class="bi bi-chat-dots me-2"></i>Messages</a>
+                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode Scanner</a>
                     <hr class="border-light">
                     <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
                 <div class="p-4 mt-auto">
                     <small class="text-light">
                         <i class="bi bi-person-circle me-2"></i>
-                        <?= esc(session()->get('name')) ?><br>
+                        <?= esc((session()->get('username') ?? session()->get('name'))) ?><br>
                         <span class="badge bg-danger mt-1"><?= ucfirst(session()->get('role')) ?></span>
                     </small>
                 </div>
@@ -224,7 +225,7 @@
                                             <p class="mb-0">
                                                 <strong><?= $out_of_stock_count ?></strong> item(s) are out of stock and cannot be sold.
                                             </p>
-                                            <a href="<?= base_url('admin/inventory/low-stock') ?>" class="btn btn-sm btn-danger mt-2">
+                                            <a href="<?= base_url('admin/menu/alerts') ?>" class="btn btn-sm btn-danger mt-2">
                                                 View Details <i class="bi bi-arrow-right"></i>
                                             </a>
                                         </div>
@@ -238,7 +239,7 @@
                                             <p class="mb-0">
                                                 <strong><?= $low_stock_count ?></strong> item(s) are running low on stock.
                                             </p>
-                                            <a href="<?= base_url('admin/inventory') ?>" class="btn btn-sm btn-warning mt-2">
+                                            <a href="<?= base_url('admin/menu/inventory') ?>" class="btn btn-sm btn-warning mt-2">
                                                 Manage Inventory <i class="bi bi-arrow-right"></i>
                                             </a>
                                         </div>
@@ -286,7 +287,7 @@
                                     </div>
                                     <?php if (count($low_stock_items) > 5): ?>
                                         <div class="text-center">
-                                            <a href="<?= base_url('admin/inventory/low-stock') ?>" class="btn btn-sm btn-outline-primary">
+                                            <a href="<?= base_url('admin/menu/alerts') ?>" class="btn btn-sm btn-outline-primary">
                                                 View All <?= count($low_stock_items) ?> Items
                                             </a>
                                         </div>
@@ -299,50 +300,6 @@
                 </div>
                 <?php endif; ?>
 
-                <!-- Quick Actions -->
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header bg-white">
-                                <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-2">
-                                        <a href="<?= base_url('admin/menu/add') ?>" class="btn btn-outline-primary w-100 mb-2">
-                                            <i class="bi bi-plus-circle me-2"></i>Add Menu Item
-                                        </a>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <a href="<?= base_url('admin/reports') ?>" class="btn btn-outline-success w-100 mb-2">
-                                            <i class="bi bi-file-earmark-bar-graph me-2"></i>View Reports
-                                        </a>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <a href="<?= base_url('admin/users/add') ?>" class="btn btn-outline-info w-100 mb-2">
-                                            <i class="bi bi-person-plus me-2"></i>Add User
-                                        </a>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <a href="<?= base_url('admin/inventory') ?>" class="btn btn-outline-warning w-100 mb-2">
-                                            <i class="bi bi-box-seam me-2"></i>Manage Inventory
-                                        </a>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <a href="<?= base_url('admin/inventory/report') ?>" class="btn btn-outline-secondary w-100 mb-2">
-                                            <i class="bi bi-clipboard-data me-2"></i>Inventory Report
-                                        </a>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-outline-danger w-100 mb-2" data-bs-toggle="modal" data-bs-target="#emailReportModal">
-                                            <i class="bi bi-envelope me-2"></i>Send Daily Report
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -423,12 +380,18 @@
             openChatBtn.style.display = 'flex';
         }
 
-        openChatBtn.addEventListener('click', openChat);
-        openChatLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            openChat();
-        });
-        closeChatBtn.addEventListener('click', closeChat);
+        if (openChatBtn) {
+            openChatBtn.addEventListener('click', openChat);
+        }
+        if (openChatLink) {
+            openChatLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                openChat();
+            });
+        }
+        if (closeChatBtn) {
+            closeChatBtn.addEventListener('click', closeChat);
+        }
 
         // Email Report Functionality
         const sendReportBtn = document.getElementById('sendReportBtn');

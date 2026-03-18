@@ -47,6 +47,7 @@
                 </div>
                 <nav class="nav flex-column">
                     <a href="<?= base_url('pos') ?>" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+                    <a href="<?= base_url('pos/order/new') ?>" class="nav-link"><i class="bi bi-cart-plus me-2"></i>New Counter Order</a>
                     <a href="<?= base_url('staff/send-sms') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>Message Admin</a>
                     <a href="<?= base_url('pos/search') ?>" class="nav-link"><i class="bi bi-search me-2"></i>Search Order</a>
                     <a href="<?= base_url('pos/orders') ?>" class="nav-link"><i class="bi bi-list-ul me-2"></i>All Orders</a>
@@ -55,14 +56,13 @@
                     <?php endif; ?>
                     <hr class="border-light">
                     <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Scan Barcode</a>
-                    <a href="#" id="openChatLink" class="nav-link"><i class="bi bi-chat-dots me-2"></i>Messages</a>
                     <hr class="border-light">
                     <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
                 <div class="p-4 mt-auto">
                     <small class="text-light">
                         <i class="bi bi-person-circle me-2"></i>
-                        <?= esc(session()->get('name')) ?><br>
+                        <?= esc((session()->get('username') ?? session()->get('name'))) ?><br>
                         <span class="badge bg-light text-dark mt-1"><?= ucfirst(session()->get('role')) ?></span>
                     </small>
                 </div>
@@ -73,7 +73,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2>POS Dashboard</h2>
-                        <p class="text-muted">Welcome back, <?= esc(session()->get('name')) ?>!</p>
+                        <p class="text-muted">Welcome back, <?= esc((session()->get('username') ?? session()->get('name'))) ?>!</p>
                     </div>
                     <div>
                         <span class="text-muted"><?= date('l, F d, Y') ?></span>
@@ -232,12 +232,18 @@
             openChatBtn.style.display = 'flex';
         }
 
-        openChatBtn.addEventListener('click', openChat);
-        openChatLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            openChat();
-        });
-        closeChatBtn.addEventListener('click', closeChat);
+        if (openChatBtn) {
+            openChatBtn.addEventListener('click', openChat);
+        }
+        if (openChatLink) {
+            openChatLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                openChat();
+            });
+        }
+        if (closeChatBtn) {
+            closeChatBtn.addEventListener('click', closeChat);
+        }
     </script>
 </body>
 </html>

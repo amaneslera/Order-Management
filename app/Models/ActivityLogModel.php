@@ -33,7 +33,7 @@ class ActivityLogModel extends Model
     // Get logs with user info
     public function getLogsWithUsers($limit = 100)
     {
-        return $this->select('activity_logs.*, users.name as user_name, users.role')
+        return $this->select('activity_logs.*, users.username as user_name, users.role')
                     ->join('users', 'users.id = activity_logs.user_id', 'left')
                     ->orderBy('activity_logs.created_at', 'DESC')
                     ->limit($limit)

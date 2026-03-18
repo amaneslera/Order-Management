@@ -111,7 +111,7 @@ class StaffMessagingController extends BaseController
         }
 
         // Get admin phone from .env
-        $adminPhone = getenv('sms.adminPhone') ?: '';
+        $adminPhone = getenv('sms.adminPhone') ?: (getenv('ADMIN_PHONE_NUMBER') ?: '');
 
         // Prepare log data
         $logData = [
@@ -123,6 +123,7 @@ class StaffMessagingController extends BaseController
             'error_message' => null,
             'sms_id' => null,
             'sent_at' => null,
+            'created_at' => date('Y-m-d H:i:s'),
         ];
 
         try {

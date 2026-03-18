@@ -47,13 +47,15 @@
                     <a href="<?= base_url('admin') ?>" class="nav-link"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
                     <a href="<?= base_url('admin/reports') ?>" class="nav-link"><i class="bi bi-graph-up me-2"></i>Reports</a>
                     <a href="<?= base_url('admin/menu') ?>" class="nav-link"><i class="bi bi-cup-hot me-2"></i>Menu Items</a>
-                    <a href="<?= base_url('admin/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/inventory') ?>" class="nav-link"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+                    <a href="<?= base_url('admin/menu/alerts') ?>" class="nav-link"><i class="bi bi-exclamation-triangle me-2"></i>Stock Alerts</a>
                     <a href="<?= base_url('admin/users') ?>" class="nav-link"><i class="bi bi-people me-2"></i>Users</a>
+                    <a href="<?= base_url('admin/sms-logs') ?>" class="nav-link"><i class="bi bi-chat-text me-2"></i>SMS Logs</a>
                     <a href="<?= base_url('admin/activity-logs') ?>" class="nav-link active"><i class="bi bi-activity me-2"></i>Activity Logs</a>
-                    <a href="<?= base_url('pos') ?>" class="nav-link"><i class="bi bi-shop me-2"></i>POS System</a>
-                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link"><i class="bi bi-camera me-2"></i>Scan Barcode</a>
+                    <a href="<?= base_url('pos') ?>" class="nav-link" target="_blank"><i class="bi bi-shop me-2"></i>Open Cashier POS</a>
                     <hr class="border-light">
                     <a href="<?= base_url('kiosk') ?>" class="nav-link" target="_blank"><i class="bi bi-phone me-2"></i>View Kiosk</a>
+                    <a href="<?= base_url('barcode-master/scan.php') ?>" class="nav-link" target="_blank"><i class="bi bi-upc-scan me-2"></i>Barcode Scanner</a>
                     <hr class="border-light">
                     <a href="<?= base_url('logout') ?>" class="nav-link"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
                 </nav>
@@ -225,7 +227,7 @@
             </button>
         </div>
         <div class="card-body p-0" style="height: 400px;">
-            <iframe src="<?= base_url('Realtime-chat-application-main/users.php?user=' . session()->get('name') . '&role=' . session()->get('role')) ?>" 
+            <iframe src="<?= base_url('Realtime-chat-application-main/users.php?user=' . rawurlencode((string) (session()->get('username') ?? session()->get('name'))) . '&role=' . rawurlencode((string) session()->get('role'))) ?>" 
                     style="width:100%; height:100%; border:none;"></iframe>
         </div>
     </div>

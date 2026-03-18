@@ -10,7 +10,7 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'KioskController::index');
 
 // Authentication Routes (using your existing Auth controller)
-$routes->match(['get', 'post'], 'login', 'Auth::login');
+$routes->match(['GET', 'POST'], 'login', 'Auth::login');
 $routes->get('logout', 'Auth::logout');
 
 // Main Dashboard Routes - Using NEW Coffee Kiosk Dashboards
@@ -33,11 +33,14 @@ $routes->group('kiosk', function($routes) {
 // POS Routes (Cashier Interface)
 $routes->group('pos', function($routes) {
     $routes->get('/', 'POSController::index');
+    $routes->get('order/new', 'POSController::createCounterOrder');
     $routes->get('search', 'POSController::searchOrder');
     $routes->get('order/(:num)', 'POSController::viewOrder/$1');
     $routes->post('order/status/update', 'POSController::updateOrderStatus');
     $routes->post('order/item/add', 'POSController::addOrderItem');
+    $routes->post('order/item/update', 'POSController::updateOrderItemQuantity');
     $routes->post('order/item/remove', 'POSController::removeOrderItem');
+    $routes->get('payment/(:num)', 'POSController::viewPayment/$1');
     $routes->post('payment/process', 'POSController::processPayment');
     $routes->get('receipt/(:num)', 'POSController::viewReceipt/$1');
     $routes->get('orders', 'POSController::listOrders');
@@ -71,11 +74,10 @@ $routes->group('admin', function($routes) {
     // Email Reports
     $routes->post('send-daily-report', 'AdminController::sendDailySalesReport');
     
-    // Inventory Management
-    $routes->get('inventory', 'AdminController::inventory');
-    $routes->post('inventory/update-stock', 'AdminController::updateStock');
-    $routes->get('inventory/low-stock', 'AdminController::lowStockAlerts');
-    $routes->get('inventory/report', 'AdminController::inventoryReport');
+    // Inventory Management (legacy aliases point to canonical menu inventory flow)
+    $routes->get('inventory', 'MenuController::inventorySummary');
+    $routes->post('inventory/update-stock', 'MenuController::adjustStock');
+    $routes->get('inventory/low-stock', 'MenuController::alerts');
     
     // Menu Management
     $routes->get('menu', 'MenuController::index');
@@ -85,5 +87,12 @@ $routes->group('admin', function($routes) {
     $routes->post('menu/edit/(:num)', 'MenuController::edit/$1');
     $routes->get('menu/delete/(:num)', 'MenuController::delete/$1');
     $routes->post('menu/toggle-status/(:num)', 'MenuController::toggleStatus/$1');
+    $routes->post('menu/adjust-stock', 'MenuController::adjustStock');
+    $routes->post('menu/set-threshold', 'MenuController::setLowStockThreshold');
+    $routes->get('menu/inventory', 'MenuController::inventorySummary');
+    $routes->post('menu/check-stock', 'MenuController::checkStockLevels');
+    $routes->get('menu/alerts', 'MenuController::alerts');
+    $routes->post('menu/dismiss-alert', 'MenuController::dismissAlert');
+    $routes->get('menu/get-alerts', 'MenuController::getAlerts');
 });
 

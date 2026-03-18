@@ -103,7 +103,7 @@
 
                 <div class="text-center mt-4">
                     <small class="text-muted">
-                        Logged in as: <strong><?= esc(session()->get('name')) ?></strong>
+                        Logged in as: <strong><?= esc((session()->get('username') ?? session()->get('name'))) ?></strong>
                         (<?= ucfirst(session()->get('role')) ?>)
                     </small>
                 </div>

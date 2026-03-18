@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Menu Item - Admin</title>
+    <title>Edit Menu Item - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
@@ -24,8 +24,8 @@
             color: white;
         }
         .image-preview {
-            width: 200px;
-            height: 200px;
+            width: 220px;
+            height: 220px;
             border: 2px dashed #ccc;
             border-radius: 10px;
             display: flex;
@@ -43,7 +43,6 @@
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <div class="col-md-2 sidebar p-0">
                 <div class="p-4">
                     <h4><i class="bi bi-shield-check me-2"></i>Admin Panel</h4>
@@ -67,12 +66,11 @@
                 </nav>
             </div>
 
-            <!-- Main Content -->
             <div class="col-md-10 p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2>Add New Menu Item</h2>
-                        <p class="text-muted">Create a new coffee or snack item</p>
+                        <h2>Edit Menu Item</h2>
+                        <p class="text-muted mb-0">Update details for <?= esc($menu_item['name']) ?></p>
                     </div>
                     <a href="<?= base_url('admin/menu') ?>" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-2"></i>Back to Menu
@@ -94,22 +92,26 @@
                                     </div>
                                 <?php endif; ?>
 
-                                <form action="<?= base_url('admin/menu/add') ?>" method="POST" enctype="multipart/form-data">
+                                <?php if (session()->getFlashdata('error')): ?>
+                                    <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+                                <?php endif; ?>
+
+                                <form action="<?= base_url('admin/menu/edit/' . $menu_item['id']) ?>" method="POST" enctype="multipart/form-data">
                                     <?= csrf_field() ?>
 
                                     <div class="row">
                                         <div class="col-md-8">
                                             <div class="mb-3">
                                                 <label for="name" class="form-label">Item Name *</label>
-                                                <input type="text" class="form-control form-control-lg" id="name" name="name" 
-                                                       placeholder="e.g., Caramel Macchiato" required value="<?= old('name') ?>">
+                                                <input type="text" class="form-control form-control-lg" id="name" name="name"
+                                                       required value="<?= esc(old('name', $menu_item['name'])) ?>">
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="mb-3">
-                                                <label for="price" class="form-label">Price (₱) *</label>
-                                                <input type="number" class="form-control form-control-lg" id="price" name="price" 
-                                                       step="0.01" min="0" placeholder="0.00" required value="<?= old('price') ?>">
+                                                <label for="price" class="form-label">Price (PHP) *</label>
+                                                <input type="number" class="form-control form-control-lg" id="price" name="price"
+                                                       step="0.01" min="0" required value="<?= esc(old('price', $menu_item['price'])) ?>">
                                             </div>
                                         </div>
                                     </div>
@@ -118,22 +120,24 @@
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label for="category" class="form-label">Category *</label>
+                                                <?php $selectedCategory = old('category', $menu_item['category']); ?>
                                                 <select class="form-select form-select-lg" id="category" name="category" required>
                                                     <option value="">Select Category</option>
-                                                    <option value="Coffee" <?= old('category') === 'Coffee' ? 'selected' : '' ?>>Coffee</option>
-                                                    <option value="Snacks" <?= old('category') === 'Snacks' ? 'selected' : '' ?>>Snacks</option>
-                                                    <option value="Beverages" <?= old('category') === 'Beverages' ? 'selected' : '' ?>>Beverages</option>
-                                                    <option value="Desserts" <?= old('category') === 'Desserts' ? 'selected' : '' ?>>Desserts</option>
-                                                    <option value="Other" <?= old('category') === 'Other' ? 'selected' : '' ?>>Other</option>
+                                                    <option value="Coffee" <?= $selectedCategory === 'Coffee' ? 'selected' : '' ?>>Coffee</option>
+                                                    <option value="Snacks" <?= $selectedCategory === 'Snacks' ? 'selected' : '' ?>>Snacks</option>
+                                                    <option value="Beverages" <?= $selectedCategory === 'Beverages' ? 'selected' : '' ?>>Beverages</option>
+                                                    <option value="Desserts" <?= $selectedCategory === 'Desserts' ? 'selected' : '' ?>>Desserts</option>
+                                                    <option value="Other" <?= $selectedCategory === 'Other' ? 'selected' : '' ?>>Other</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label for="status" class="form-label">Status *</label>
+                                                <?php $selectedStatus = old('status', $menu_item['status']); ?>
                                                 <select class="form-select form-select-lg" id="status" name="status" required>
-                                                    <option value="available" <?= old('status') === 'available' ? 'selected' : '' ?>>Available</option>
-                                                    <option value="unavailable" <?= old('status') === 'unavailable' ? 'selected' : '' ?>>Unavailable</option>
+                                                    <option value="available" <?= $selectedStatus === 'available' ? 'selected' : '' ?>>Available</option>
+                                                    <option value="unavailable" <?= $selectedStatus === 'unavailable' ? 'selected' : '' ?>>Unavailable</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -141,30 +145,32 @@
 
                                     <div class="mb-3">
                                         <label for="description" class="form-label">Description</label>
-                                        <textarea class="form-control" id="description" name="description" rows="4" 
-                                                  placeholder="Describe the item, ingredients, or special features..."><?= old('description') ?></textarea>
+                                        <textarea class="form-control" id="description" name="description" rows="4"
+                                                  placeholder="Describe the item...\"><?= esc(old('description', $menu_item['description'])) ?></textarea>
                                     </div>
 
-                                    <div class="mb-4">
-                                        <label for="image" class="form-label">Item Image *</label>
-                                        <input type="file" class="form-control" id="image" name="image" accept="image/*" required onchange="previewImage(event)">
-                                        <small class="text-muted">Maximum file size: 2MB. Supported formats: JPG, PNG, GIF</small>
+                                    <div class="mb-3">
+                                        <label for="image" class="form-label">Replace Image (Optional)</label>
+                                        <input type="file" class="form-control" id="image" name="image" accept="image/*" onchange="previewImage(event)">
+                                        <small class="text-muted">Leave empty to keep the current image.</small>
                                     </div>
 
                                     <div class="mb-4">
                                         <label class="form-label">Image Preview</label>
                                         <div class="image-preview" id="imagePreview">
-                                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                            <?php if (!empty($menu_item['image'])): ?>
+                                                <img src="<?= base_url('uploads/menu/' . $menu_item['image']) ?>" alt="Current image">
+                                            <?php else: ?>
+                                                <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
 
                                     <div class="d-flex gap-2">
                                         <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="bi bi-save me-2"></i>Save Menu Item
+                                            <i class="bi bi-save me-2"></i>Update Menu Item
                                         </button>
-                                        <a href="<?= base_url('admin/menu') ?>" class="btn btn-outline-secondary btn-lg">
-                                            Cancel
-                                        </a>
+                                        <a href="<?= base_url('admin/menu') ?>" class="btn btn-outline-secondary btn-lg">Cancel</a>
                                     </div>
                                 </form>
                             </div>
@@ -174,27 +180,11 @@
                     <div class="col-md-4">
                         <div class="card bg-light">
                             <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-info-circle me-2"></i>Tips</h6>
-                                <ul class="small mb-0">
-                                    <li>Use clear, descriptive names</li>
-                                    <li>Upload high-quality images (recommended: 800x800px)</li>
-                                    <li>Set accurate prices</li>
-                                    <li>Choose the correct category</li>
-                                    <li>Write appealing descriptions</li>
-                                    <li>Mark as "Available" when ready to sell</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="card mt-3">
-                            <div class="card-body">
-                                <h6 class="card-title"><i class="bi bi-star me-2"></i>Popular Categories</h6>
-                                <div class="d-flex flex-column gap-2">
-                                    <span class="badge bg-primary">Coffee</span>
-                                    <span class="badge bg-success">Snacks</span>
-                                    <span class="badge bg-info">Beverages</span>
-                                    <span class="badge bg-warning text-dark">Desserts</span>
-                                </div>
+                                <h6 class="card-title"><i class="bi bi-info-circle me-2"></i>Current Info</h6>
+                                <p class="mb-1"><strong>ID:</strong> #<?= esc($menu_item['id']) ?></p>
+                                <p class="mb-1"><strong>Stock:</strong> <?= esc($menu_item['stock_quantity']) ?></p>
+                                <p class="mb-1"><strong>Low Stock Threshold:</strong> <?= esc($menu_item['low_stock_threshold']) ?></p>
+                                <p class="mb-0"><strong>Status:</strong> <?= esc(ucfirst($menu_item['status'])) ?></p>
                             </div>
                         </div>
                     </div>
@@ -208,11 +198,11 @@
         function previewImage(event) {
             const preview = document.getElementById('imagePreview');
             const file = event.target.files[0];
-            
+
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    preview.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
                 };
                 reader.readAsDataURL(file);
             }
