@@ -214,7 +214,7 @@
                                         </td>
                                         <td>
                                             <?php
-                                            if ($item['stock_quantity'] === 0) {
+                                            if ((int)$item['stock_quantity'] === 0) {
                                                 echo '<span class="badge stock-badge-critical">Out of Stock</span>';
                                             } elseif ($item['stock_quantity'] <= $item['low_stock_threshold']) {
                                                 echo '<span class="badge stock-badge-low">Low Stock</span>';
