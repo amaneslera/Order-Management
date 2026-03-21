@@ -112,25 +112,25 @@
                 <div class="row mb-4">
                     <div class="col-md-3">
                         <div class="stat-card text-center">
-                            <h3><?= $total_items ?></h3>
+                            <h3 id="stat-total-items"><?= $total_items ?></h3>
                             <p class="text-muted mb-0">Total Items</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card text-center">
-                            <h3 class="text-success"><?= $total_items - $low_stock_items - $out_of_stock_items ?></h3>
+                            <h3 id="stat-in-stock-items" class="text-success"><?= $total_items - $low_stock_items - $out_of_stock_items ?></h3>
                             <p class="text-muted mb-0">In Stock</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card text-center">
-                            <h3 class="text-warning"><?= $low_stock_items ?></h3>
+                            <h3 id="stat-low-stock-items" class="text-warning"><?= $low_stock_items ?></h3>
                             <p class="text-muted mb-0">Low Stock</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card text-center">
-                            <h3 class="text-danger"><?= $out_of_stock_items ?></h3>
+                            <h3 id="stat-out-stock-items" class="text-danger"><?= $out_of_stock_items ?></h3>
                             <p class="text-muted mb-0">Out of Stock</p>
                         </div>
                     </div>
@@ -165,7 +165,7 @@
                                 </thead>
                                 <tbody>
                                     <?php foreach ($menu_items as $item): ?>
-                                    <tr class="item-row">
+                                    <tr class="item-row" data-item-id="<?= (int) $item['id'] ?>">
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <?php if ($item['image'] && file_exists(FCPATH . 'uploads/menu/' . $item['image'])): ?>
@@ -199,7 +199,7 @@
                                                     $stockClass = 'low';
                                                 }
                                                 ?>
-                                                <div class="stock-fill <?= $stockClass ?>" style="width: <?= $percentage ?>%">
+                                                <div id="stock-fill-<?= (int) $item['id'] ?>" class="stock-fill <?= $stockClass ?>" style="width: <?= $percentage ?>%">
                                                     <?php if ($percentage >= 20): ?><?= $item['stock_quantity'] ?><?php endif; ?>
                                                 </div>
                                             </div>
@@ -214,12 +214,12 @@
                                         </td>
                                         <td>
                                             <?php
-                                            if ((int)$item['stock_quantity'] === 0) {
-                                                echo '<span class="badge stock-badge-critical">Out of Stock</span>';
+                                            if ((int) $item['stock_quantity'] === 0) {
+                                                echo '<span id="status-' . (int) $item['id'] . '" class="badge stock-badge-critical">Out of Stock</span>';
                                             } elseif ($item['stock_quantity'] <= $item['low_stock_threshold']) {
-                                                echo '<span class="badge stock-badge-low">Low Stock</span>';
+                                                echo '<span id="status-' . (int) $item['id'] . '" class="badge stock-badge-low">Low Stock</span>';
                                             } else {
-                                                echo '<span class="badge stock-badge-ok">OK</span>';
+                                                echo '<span id="status-' . (int) $item['id'] . '" class="badge stock-badge-ok">OK</span>';
                                             }
                                             ?>
                                         </td>
@@ -425,10 +425,12 @@
 
         // Open stock adjust modal
         function openStockAdjustModal(itemId, itemName, currentStock) {
+            const liveQtyEl = document.getElementById('qty-' + itemId);
+            const resolvedStock = liveQtyEl ? parseInt(liveQtyEl.textContent, 10) || 0 : (parseInt(currentStock, 10) || 0);
             currentItemId = itemId;
-            currentStockValue = parseInt(currentStock) || 0;
+            currentStockValue = resolvedStock;
             document.getElementById('modalItemName').textContent = itemName;
-            document.getElementById('modalCurrentStock').textContent = currentStock;
+            document.getElementById('modalCurrentStock').textContent = resolvedStock;
             document.getElementById('adjustQuantity').value = 1;
             document.getElementById('actionAdd').checked = true;
             document.getElementById('adjustReason').value = 'Manual Stock Adjustment';
@@ -497,10 +499,100 @@
 
         // Open threshold modal
         function openThresholdModal(itemId, itemName, currentThreshold) {
+            const liveThresholdEl = document.getElementById('threshold-' + itemId);
+            const resolvedThreshold = liveThresholdEl ? parseInt(liveThresholdEl.textContent, 10) || 0 : (parseInt(currentThreshold, 10) || 0);
             currentItemId = itemId;
             document.getElementById('thresholdItemName').textContent = itemName;
-            document.getElementById('thresholdQuantity').value = currentThreshold;
+            document.getElementById('thresholdQuantity').value = resolvedThreshold;
             new bootstrap.Modal(document.getElementById('thresholdModal')).show();
+        }
+
+        function getStockLevelClass(stock, threshold) {
+            if (stock === 0) return 'critical';
+            if (stock <= threshold) return 'low';
+            return '';
+        }
+
+        function updateStatusBadge(itemId, stock, threshold) {
+            const statusEl = document.getElementById('status-' + itemId);
+            if (!statusEl) return;
+
+            statusEl.classList.remove('stock-badge-critical', 'stock-badge-low', 'stock-badge-ok');
+            if (stock === 0) {
+                statusEl.classList.add('stock-badge-critical');
+                statusEl.textContent = 'Out of Stock';
+            } else if (stock <= threshold) {
+                statusEl.classList.add('stock-badge-low');
+                statusEl.textContent = 'Low Stock';
+            } else {
+                statusEl.classList.add('stock-badge-ok');
+                statusEl.textContent = 'OK';
+            }
+        }
+
+        async function refreshInventorySnapshot() {
+            try {
+                const response = await fetch('<?= base_url('admin/menu/inventory-snapshot') ?>', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                if (!data.success || !Array.isArray(data.items)) {
+                    return;
+                }
+
+                const byId = new Map(data.items.map(item => [String(item.id), item]));
+                document.querySelectorAll('.item-row[data-item-id]').forEach(row => {
+                    const itemId = row.getAttribute('data-item-id');
+                    const item = byId.get(String(itemId));
+                    if (!item) return;
+
+                    const stock = parseInt(item.stock_quantity, 10) || 0;
+                    const threshold = parseInt(item.low_stock_threshold, 10) || 0;
+
+                    const qtyEl = document.getElementById('qty-' + itemId);
+                    if (qtyEl) qtyEl.textContent = stock;
+
+                    const thresholdEl = document.getElementById('threshold-' + itemId);
+                    if (thresholdEl) thresholdEl.textContent = threshold;
+
+                    const fillEl = document.getElementById('stock-fill-' + itemId);
+                    if (fillEl) {
+                        const maxStock = 100;
+                        const percentage = Math.min((stock / maxStock) * 100, 100);
+                        fillEl.classList.remove('low', 'critical');
+                        const stockClass = getStockLevelClass(stock, threshold);
+                        if (stockClass) {
+                            fillEl.classList.add(stockClass);
+                        }
+                        fillEl.style.width = percentage + '%';
+                        fillEl.textContent = percentage >= 20 ? String(stock) : '';
+                    }
+
+                    updateStatusBadge(itemId, stock, threshold);
+                });
+
+                if (data.stats) {
+                    const totalEl = document.getElementById('stat-total-items');
+                    const inStockEl = document.getElementById('stat-in-stock-items');
+                    const lowEl = document.getElementById('stat-low-stock-items');
+                    const outEl = document.getElementById('stat-out-stock-items');
+
+                    if (totalEl) totalEl.textContent = String(data.stats.total_items ?? 0);
+                    if (inStockEl) inStockEl.textContent = String(data.stats.in_stock_items ?? 0);
+                    if (lowEl) lowEl.textContent = String(data.stats.low_stock_items ?? 0);
+                    if (outEl) outEl.textContent = String(data.stats.out_of_stock_items ?? 0);
+                }
+            } catch (error) {
+                console.error('Live inventory refresh failed:', error);
+            }
         }
 
         // Submit threshold update
@@ -561,6 +653,9 @@
                 }
             });
         });
+
+        // Keep inventory values fresh for all logged-in admin sessions.
+        setInterval(refreshInventorySnapshot, 15000);
     </script>
 </body>
 </html>

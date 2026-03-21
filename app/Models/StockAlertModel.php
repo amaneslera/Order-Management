@@ -14,11 +14,8 @@ class StockAlertModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = ['menu_item_id', 'alert_type', 'current_stock', 'threshold', 'sent_sms', 'sent_email', 'created_at'];
 
-    // Dates
-    protected $useTimestamps = true;
-    protected $dateFormat    = 'datetime';
-    protected $createdField  = 'created_at';
-    protected $updatedField  = null;
+    // Let MySQL set created_at via column default; table has no updated_at column.
+    protected $useTimestamps = false;
 
     // Get active alerts
     public function getActiveAlerts()
@@ -66,7 +63,7 @@ class StockAlertModel extends Model
             return false; // Alert already sent recently
         }
 
-        return (bool) $this->insert([
+        $inserted = $this->insert([
             'menu_item_id' => $itemId,
             'alert_type'   => $type,
             'current_stock' => $currentStock,
@@ -74,6 +71,8 @@ class StockAlertModel extends Model
             'sent_sms'     => 0,
             'sent_email'   => 0
         ]);
+
+        return $inserted ? (int) $inserted : false;
     }
 
     // Mark alert as SMS sent

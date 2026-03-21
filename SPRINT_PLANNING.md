@@ -1,5 +1,99 @@
 # Coffee Kiosk Order Management System - Sprint Planning
 
+## Project Configuration Guide (Local Setup)
+
+Use this checklist first before developing Sprint features.
+
+### 1. Prerequisites
+- PHP 8.1+
+- Composer
+- MySQL/MariaDB (XAMPP is supported)
+- Apache (if running via XAMPP)
+
+### 2. Clone and Install
+```bash
+git clone https://github.com/amaneslera/Order-Management.git
+cd Order-Management
+composer install
+```
+
+### 3. Database Setup
+Create database:
+```sql
+CREATE DATABASE coffee_kiosk;
+```
+
+Update DB connection in `.env` (copy from `.env.example` if needed):
+```env
+database.default.hostname = localhost
+database.default.database = coffee_kiosk
+database.default.username = root
+database.default.password =
+database.default.DBDriver = MySQLi
+database.default.port = 3306
+```
+
+### 4. App URL Setup
+If using `php spark serve`:
+```env
+app.baseURL = 'http://localhost:8080/'
+```
+
+If using XAMPP Apache project path:
+```env
+app.baseURL = 'http://localhost/Order-Management/public/'
+```
+
+### 5. Run Schema and Seeders
+Run CodeIgniter migrations and seed data:
+```bash
+php spark migrate
+php spark db:seed UsersSeeder
+php spark db:seed InitialDataSeeder
+```
+
+### 6. Stock Alerts Table (Important)
+`stock_alerts` is provided as SQL script, so apply it after migrations:
+```bash
+mysql -u root coffee_kiosk < script/create_stock_alerts_table.sql
+```
+
+Alternative: run the SQL file in phpMyAdmin.
+
+### 7. Run the Application
+Option A - CI dev server:
+```bash
+php spark serve
+```
+
+Option B - XAMPP Apache:
+- Open: `http://localhost/Order-Management/public/`
+
+### 8. Login Accounts
+Default seeded accounts:
+- Admin: `admin` / `admin123`
+- Cashier: `cashier` / `cashier123`
+
+### 9. Optional SMS/Alert Configuration
+For SMS low-stock alerts and staff messaging, set in `.env`:
+```env
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+ADMIN_PHONE_NUMBER=
+```
+
+Without these, SMS-related features load but cannot send messages.
+
+### 10. Quick Verification Checklist
+- Can open `/login`
+- Can login as Admin and Cashier
+- Can open `/admin/menu/inventory`
+- Can open `/admin/menu/alerts`
+- Can open `/admin/users`
+
+---
+
 ## Sprint 1: Core POS & Inventory (COMPLETED ✅)
 
 | Story ID | User Story Title | Complexity (Points) | Status |

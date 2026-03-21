@@ -206,9 +206,10 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function openEditUserModal(userId, username, role) {
+        const normalizedRole = String(role).toLowerCase() === 'admin' ? 'Admin' : 'cashier';
         document.getElementById('editUserForm').action = '<?= base_url('admin/users/edit') ?>/' + userId;
         document.getElementById('editUsername').value = username;
-        document.getElementById('editRole').value = role;
+        document.getElementById('editRole').value = normalizedRole;
         new bootstrap.Modal(document.getElementById('editUserModal')).show();
     }
 </script>

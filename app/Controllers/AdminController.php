@@ -43,6 +43,20 @@ class AdminController extends BaseController
         return null;
     }
 
+    // Normalize role values from forms/DB to canonical values used by the app.
+    private function normalizeRole(string $role, string $fallback = 'cashier'): string
+    {
+        $normalized = strtolower(trim($role));
+        if ($normalized === 'admin') {
+            return 'Admin';
+        }
+        if ($normalized === 'cashier') {
+            return 'cashier';
+        }
+
+        return $fallback;
+    }
+
     // Admin Dashboard
     public function dashboard()
     {
@@ -210,7 +224,23 @@ class AdminController extends BaseController
         $authCheck = $this->checkAuth();
         if ($authCheck) return $authCheck;
 
-        $data['logs'] = $this->activityLog->getLogsWithUsers(100);
+        $action = trim((string) ($this->request->getGet('action') ?? ''));
+        $role = trim((string) ($this->request->getGet('role') ?? ''));
+        $dateFrom = trim((string) ($this->request->getGet('date_from') ?? ''));
+        $dateTo = trim((string) ($this->request->getGet('date_to') ?? ''));
+
+        $filters = [
+            'action' => $action,
+            'role' => $role,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ];
+
+        $data['logs'] = $this->activityLog->getFilteredLogsWithUsers($filters, 100);
+        $data['selected_action'] = $action;
+        $data['selected_role'] = $role;
+        $data['selected_date_from'] = $dateFrom;
+        $data['selected_date_to'] = $dateTo;
 
         return view('admin/activity_logs', $data);
     }
@@ -244,7 +274,7 @@ class AdminController extends BaseController
             $userData = [
                 'username' => $username,
                 'password' => password_hash($password, PASSWORD_DEFAULT),
-                'role'     => in_array($role, ['Admin', 'cashier'], true) ? $role : 'cashier',
+                'role'     => $this->normalizeRole($role),
             ];
 
             if ($this->userModel->insert($userData)) {
@@ -285,7 +315,7 @@ class AdminController extends BaseController
 
             $userData = [
                 'username' => $username,
-                'role'  => in_array($role, ['Admin', 'cashier'], true) ? $role : 'cashier',
+                'role'  => $this->normalizeRole($role, (string) ($user['role'] ?? 'cashier')),
             ];
 
             $password = $this->request->getPost('password');
@@ -294,11 +324,23 @@ class AdminController extends BaseController
             }
 
             if ($this->userModel->update($userId, $userData)) {
+                $isEditingSelf = (int) $userId === (int) session()->get('user_id');
+
+                // Keep current session permissions aligned when editing own account.
+                if ($isEditingSelf) {
+                    session()->set('role', $userData['role']);
+                    session()->set('is_admin', $userData['role'] === 'Admin');
+                }
+
                 $this->activityLog->logActivity(
                     session()->get('user_id'),
                     'edit_user',
                     "Updated user: {$userData['username']}"
                 );
+
+                if ($isEditingSelf && $userData['role'] !== 'Admin') {
+                    return redirect()->to('/pos')->with('success', 'User updated. Your role is now Cashier.');
+                }
 
                 return redirect()->to('/admin/users')->with('success', 'User updated successfully');
             }

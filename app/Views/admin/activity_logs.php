@@ -83,33 +83,33 @@
                                 <label class="form-label">Action Type</label>
                                 <select name="action" class="form-select" onchange="this.form.submit()">
                                     <option value="">All Actions</option>
-                                    <option value="login">Login</option>
-                                    <option value="logout">Logout</option>
-                                    <option value="add_menu_item">Add Menu Item</option>
-                                    <option value="edit_menu_item">Edit Menu Item</option>
-                                    <option value="delete_menu_item">Delete Menu Item</option>
-                                    <option value="add_user">Add User</option>
-                                    <option value="edit_user">Edit User</option>
-                                    <option value="delete_user">Delete User</option>
-                                    <option value="process_payment">Process Payment</option>
-                                    <option value="update_order_status">Update Order</option>
+                                    <option value="login" <?= ($selected_action ?? '') === 'login' ? 'selected' : '' ?>>Login</option>
+                                    <option value="logout" <?= ($selected_action ?? '') === 'logout' ? 'selected' : '' ?>>Logout</option>
+                                    <option value="add_menu_item" <?= ($selected_action ?? '') === 'add_menu_item' ? 'selected' : '' ?>>Add Menu Item</option>
+                                    <option value="edit_menu_item" <?= ($selected_action ?? '') === 'edit_menu_item' ? 'selected' : '' ?>>Edit Menu Item</option>
+                                    <option value="delete_menu_item" <?= ($selected_action ?? '') === 'delete_menu_item' ? 'selected' : '' ?>>Delete Menu Item</option>
+                                    <option value="add_user" <?= ($selected_action ?? '') === 'add_user' ? 'selected' : '' ?>>Add User</option>
+                                    <option value="edit_user" <?= ($selected_action ?? '') === 'edit_user' ? 'selected' : '' ?>>Edit User</option>
+                                    <option value="delete_user" <?= ($selected_action ?? '') === 'delete_user' ? 'selected' : '' ?>>Delete User</option>
+                                    <option value="process_payment" <?= ($selected_action ?? '') === 'process_payment' ? 'selected' : '' ?>>Process Payment</option>
+                                    <option value="update_order_status" <?= ($selected_action ?? '') === 'update_order_status' ? 'selected' : '' ?>>Update Order</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">User Role</label>
                                 <select name="role" class="form-select" onchange="this.form.submit()">
                                     <option value="">All Roles</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="cashier">Cashier</option>
+                                    <option value="admin" <?= ($selected_role ?? '') === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                    <option value="cashier" <?= ($selected_role ?? '') === 'cashier' ? 'selected' : '' ?>>Cashier</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Date From</label>
-                                <input type="date" name="date_from" class="form-control">
+                                <input type="date" name="date_from" class="form-control" value="<?= esc($selected_date_from ?? '') ?>">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Date To</label>
-                                <input type="date" name="date_to" class="form-control">
+                                <input type="date" name="date_to" class="form-control" value="<?= esc($selected_date_to ?? '') ?>">
                             </div>
                         </form>
                     </div>

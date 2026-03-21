@@ -93,6 +93,7 @@ $routes->group('admin', function($routes) {
     $routes->post('menu/adjust-stock', 'MenuController::adjustStock');
     $routes->post('menu/set-threshold', 'MenuController::setLowStockThreshold');
     $routes->get('menu/inventory', 'MenuController::inventorySummary');
+    $routes->get('menu/inventory-snapshot', 'MenuController::getInventorySnapshot');
     $routes->post('menu/check-stock', 'MenuController::checkStockLevels');
     $routes->get('menu/alerts', 'MenuController::alerts');
     $routes->post('menu/dismiss-alert', 'MenuController::dismissAlert');

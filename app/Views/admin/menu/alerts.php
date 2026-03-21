@@ -520,21 +520,33 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`✓ Check complete!\n${data.alerts_created} new alerts created.`);
-                    location.reload();
-                } else {
-                    alert('Error checking stock levels');
+            .then(async (response) => {
+                const responseText = await response.text();
+                let data;
+
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error('Unexpected response from server. Please check your session and server logs.');
                 }
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Error checking stock levels');
+                }
+
+                return data;
+            })
+            .then((data) => {
+                alert(`✓ Check complete!\n${data.alerts_created} new alerts created.`);
+                location.reload();
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error checking stock levels');
+                alert(error.message || 'Error checking stock levels');
             });
         }
 

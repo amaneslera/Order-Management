@@ -380,74 +380,143 @@ class MenuController extends BaseController
     // Check stock levels and create alerts
     public function checkStockLevels()
     {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ]);
+        }
+
+        try {
+            $result = $this->runStockLevelCheck(true);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'alerts_created' => $result['alerts_created'],
+                'sms_sent' => $result['sms_sent'],
+                'message' => "Stock levels checked. {$result['alerts_created']} alerts created, {$result['sms_sent']} SMS sent."
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Stock check failed: {message}', ['message' => $e->getMessage()]);
+
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Stock check failed. Ensure the inventory tables are migrated and try again.'
+            ]);
+        }
+    }
+
+    // Evaluate stock levels and optionally send notifications.
+    private function runStockLevelCheck(bool $sendNotifications = true): array
+    {
         $stockAlertModel = new \App\Models\StockAlertModel();
         $items = $this->menuModel->findAll();
         $alertsCreated = 0;
+        $smsSent = 0;
 
         foreach ($items as $item) {
             $stock = (int) ($item['stock_quantity'] ?? 0);
             $threshold = (int) ($item['low_stock_threshold'] ?? 0);
+            $alertType = null;
+            $thresholdValue = $threshold;
 
             // Check for out of stock
             if ($stock === 0) {
-                if ($stockAlertModel->createAlert($item['id'], 'out_of_stock', $stock, 0)) {
-                    $alertsCreated++;
-                    // Trigger SMS notification
-                    $this->sendStockAlertSMS($item, 'out_of_stock');
-                }
+                $alertType = 'out_of_stock';
+                $thresholdValue = 0;
             }
             // Check for low stock
             elseif ($stock > 0 && $stock <= $threshold) {
-                if ($stockAlertModel->createAlert($item['id'], 'low_stock', $stock, $threshold)) {
-                    $alertsCreated++;
-                    // Trigger SMS notification
-                    $this->sendStockAlertSMS($item, 'low_stock');
-                }
+                $alertType = 'low_stock';
+            }
+
+            if ($alertType === null) {
+                continue;
+            }
+
+            $alertId = $stockAlertModel->createAlert((int) $item['id'], $alertType, $stock, $thresholdValue);
+            if ($alertId === false) {
+                continue;
+            }
+
+            $alertsCreated++;
+
+            if ($sendNotifications && $this->sendStockAlertSMS($item, $alertType)) {
+                $stockAlertModel->markSmsSent((int) $alertId);
+                $smsSent++;
             }
         }
 
-        return $this->response->setJSON([
-            'success' => true,
+        return [
             'alerts_created' => $alertsCreated,
-            'message' => "Stock levels checked. $alertsCreated alerts created."
-        ]);
+            'sms_sent' => $smsSent,
+        ];
     }
 
     // Send SMS alert for stock level
     private function sendStockAlertSMS($item, $type)
     {
-        // Get Twilio configuration
-        $twilioSid = getenv('TWILIO_ACCOUNT_SID');
-        $twilioToken = getenv('TWILIO_AUTH_TOKEN');
-        $twilioPhone = getenv('TWILIO_PHONE_NUMBER');
-        $adminPhone = getenv('ADMIN_PHONE_NUMBER');
-
-        if (!$twilioSid || !$twilioToken || !$adminPhone) {
-            return false; // SMS service not configured
+        $adminPhone = getenv('ADMIN_PHONE_NUMBER') ?: getenv('sms.adminPhone');
+        if (!$adminPhone) {
+            return false;
         }
 
         $message = $type === 'out_of_stock'
             ? "ALERT: {$item['name']} is OUT OF STOCK."
             : "ALERT: {$item['name']} stock is LOW ({$item['stock_quantity']} remaining).";
 
-        // Use cURL to connect to Twilio API
-        $url = "https://api.twilio.com/2010-04-01/Accounts/{$twilioSid}/Messages.json";
-        
+        // Get Twilio configuration first
+        $twilioSid = getenv('TWILIO_ACCOUNT_SID');
+        $twilioToken = getenv('TWILIO_AUTH_TOKEN');
+        $twilioPhone = getenv('TWILIO_PHONE_NUMBER');
+
+        if ($twilioSid && $twilioToken && $twilioPhone) {
+            $url = "https://api.twilio.com/2010-04-01/Accounts/{$twilioSid}/Messages.json";
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, "{$twilioSid}:{$twilioToken}");
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+                'From' => $twilioPhone,
+                'To'   => $adminPhone,
+                'Body' => $message
+            ]));
+            $response = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($response !== false && $httpCode >= 200 && $httpCode < 300) {
+                return true;
+            }
+        }
+
+        // Fallback to Semaphore using .env keys already present in this project
+        $semaphoreApiKey = getenv('sms.apiKey');
+        $semaphoreSender = getenv('sms.senderName') ?: 'CoffeeKiosk';
+        if (!$semaphoreApiKey || $semaphoreApiKey === 'your-semaphore-api-key-here') {
+            return false;
+        }
+
+        $url = 'https://semaphore.co/api/v4/messages';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_USERPWD, "{$twilioSid}:{$twilioToken}");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-            'From' => $twilioPhone,
-            'To'   => $adminPhone,
-            'Body' => $message
+            'apikey' => $semaphoreApiKey,
+            'number' => $adminPhone,
+            'message' => $message,
+            'sendername' => $semaphoreSender,
         ]));
 
         $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        return $response !== false;
+        return $response !== false && $httpCode >= 200 && $httpCode < 300;
     }
 
     // Display stock alerts dashboard
@@ -498,6 +567,17 @@ class MenuController extends BaseController
     // Get alerts via API
     public function getAlerts()
     {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ]);
+        }
+
+        // Keep alerts updated automatically while this endpoint is polled.
+        $this->runStockLevelCheck(true);
+
         $lowStockItems = $this->menuModel->getLowStockItems();
         $outOfStockItems = $this->menuModel->getOutOfStockItems();
 
@@ -514,6 +594,49 @@ class MenuController extends BaseController
             ]
         ];
         return $this->response->setJSON($alerts);
+    }
+
+    // Get current inventory snapshot for live UI refresh.
+    public function getInventorySnapshot()
+    {
+        $authCheck = $this->checkAuth();
+        if ($authCheck) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ]);
+        }
+
+        $items = $this->menuModel->findAll();
+
+        $lowStock = 0;
+        $outOfStock = 0;
+        foreach ($items as $item) {
+            $stock = (int) ($item['stock_quantity'] ?? 0);
+            $threshold = (int) ($item['low_stock_threshold'] ?? 0);
+            if ($stock === 0) {
+                $outOfStock++;
+            } elseif ($stock <= $threshold) {
+                $lowStock++;
+            }
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'items' => array_map(static function ($item) {
+                return [
+                    'id' => (int) $item['id'],
+                    'stock_quantity' => (int) ($item['stock_quantity'] ?? 0),
+                    'low_stock_threshold' => (int) ($item['low_stock_threshold'] ?? 0),
+                ];
+            }, $items),
+            'stats' => [
+                'total_items' => count($items),
+                'low_stock_items' => $lowStock,
+                'out_of_stock_items' => $outOfStock,
+                'in_stock_items' => count($items) - $lowStock - $outOfStock,
+            ],
+        ]);
     }
 
     // Build active alerts directly from current inventory state.
